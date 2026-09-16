@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>GraphRoots.GraphDb</RootNamespace>
+    <AssemblyName>GraphDb</AssemblyName>
+    <Description>GraphRoots Neo4j persistence</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Neo4j.Driver" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\GraphDbInterfaces\GraphDbInterfaces.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="GraphDbTests" />
+  </ItemGroup>
+</Project>

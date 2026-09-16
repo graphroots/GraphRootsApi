@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>GraphRoots.GraphDb</RootNamespace>
+    <AssemblyName>GraphDbInterfaces</AssemblyName>
+    <Description>GraphRoots graph model and store contracts</Description>
+  </PropertyGroup>
+</Project>

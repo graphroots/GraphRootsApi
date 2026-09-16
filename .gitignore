@@ -1,0 +1,10 @@
+bin/
+obj/
+.vs/
+*.user
+.DS_Store
+test.runsettings
+testdataExt/*
+TestResults/
+.cursor/
+lib/GH_IO.dll

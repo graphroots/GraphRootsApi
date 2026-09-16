@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RunSettings>
+  <RunConfiguration>
+    <EnvironmentVariables>
+      <NEO4J_TEST_URI>bolt://127.0.0.1:17687</NEO4J_TEST_URI>
+      <NEO4J_TEST_DATABASE>graphtest</NEO4J_TEST_DATABASE>
+      <NEO4J_TEST_USER>neo4j</NEO4J_TEST_USER>
+      <NEO4J_TEST_PASSWORD>graphroots-test</NEO4J_TEST_PASSWORD>
+    </EnvironmentVariables>
+  </RunConfiguration>
+</RunSettings>

@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>GraphRoots.GraphApiTests</RootNamespace>
+    <AssemblyName>GraphApiTests</AssemblyName>
+    <IsTestProject>true</IsTestProject>
+    <Description>GraphRoots GraphQL API tests</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="HotChocolate.AspNetCore" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="MSTest.TestAdapter" />
+    <PackageReference Include="MSTest.TestFramework" />
+    <PackageReference Include="Neo4j.Driver" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\GraphApi\GraphApi.csproj" />
+    <ProjectReference Include="..\GrasshopperLib\GrasshopperLib.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="GH_IO">
+      <HintPath>..\lib\GH_IO.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="..\testdata\**\*" Link="testdata\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

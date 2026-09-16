@@ -1,0 +1,21 @@
+<Project>
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <Configurations>Debug;Release</Configurations>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest</AnalysisLevel>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <!-- Shared so GraphApi and GraphDbCli read the same ~/.microsoft/usersecrets store. -->
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'GraphApi' Or '$(MSBuildProjectName)' == 'GraphDbCli'">
+    <UserSecretsId>13c268a7-a9b9-49ec-8696-5ae7cf1348de</UserSecretsId>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- GH_IO reads System.Drawing.Bitmap from binary .gh files. SDC 6 can do that on Unix when this switch is set and libgdiplus is loadable. -->
+    <RuntimeHostConfigurationOption Include="System.Drawing.EnableUnixSupport" Value="true" />
+  </ItemGroup>
+</Project>

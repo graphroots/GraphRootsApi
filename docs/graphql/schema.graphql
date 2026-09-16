@@ -1,0 +1,837 @@
+"""Opaque JSON value (extension property payloads)."""
+scalar JSON
+
+"""ISO-8601 timestamp."""
+scalar DateTime
+
+"""Source tool of a stored entity."""
+enum Origin {
+  GRASSHOPPER
+  DYNAMO
+  GRAPHROOTS
+  UNKNOWN
+}
+
+"""Semantic class of a Node."""
+enum NodeKind {
+  OPERATOR
+  PARAMETER
+  GROUP
+  ANNOTATION
+  CLUSTER
+}
+
+"""Port direction. Synthetic floating-param ports may be BOTH."""
+enum PortDirection {
+  IN
+  OUT
+  BOTH
+}
+
+enum EntityKind {
+  DOCUMENT
+  NODE
+  PORT
+  EDGE
+}
+
+enum SortDirection {
+  ASC
+  DESC
+}
+
+enum DocumentSortField {
+  DOCUMENT_ID
+  VERSION_ID
+  FILE_NAME
+  CREATED_AT
+}
+
+enum NodeSortField {
+  NODE_ID
+  VERSION_ID
+  NAME
+  TYPE_ID
+  KIND
+  X
+  Y
+}
+
+enum PortSortField {
+  PORT_ID
+  VERSION_ID
+  NAME
+  DIRECTION
+}
+
+enum EdgeSortField {
+  VERSION_ID
+  SOURCE_PORT_ID
+  TARGET_PORT_ID
+}
+
+enum NodeTypeSortField {
+  ORIGIN
+  TYPE_ID
+  NAME
+}
+
+enum LibrarySortField {
+  ORIGIN
+  LIBRARY_ID
+  NAME
+}
+
+"""Opaque refetch key shared by stored entities."""
+interface Entity {
+  """Opaque refetch key. Store identity is the composite equality key."""
+  id: ID!
+}
+
+type Query {
+  entity(id: ID!): Entity
+  document(documentId: ID!, versionId: ID!): Document
+  documents(filter: DocumentFilter, sort: DocumentSort, first: Int, after: String): DocumentConnection!
+  node(versionId: ID!, nodeId: ID!): Node
+  nodes(filter: NodeFilter, sort: NodeSort, first: Int, after: String): NodeConnection!
+  port(versionId: ID!, portId: ID!): Port
+  ports(filter: PortFilter, sort: PortSort, first: Int, after: String): PortConnection!
+  edge(versionId: ID!, sourcePortId: ID!, targetPortId: ID!): Edge
+  edges(filter: EdgeFilter, sort: EdgeSort, first: Int, after: String): EdgeConnection!
+  nodeType(origin: Origin!, typeId: ID!): NodeType
+  nodeTypes(filter: NodeTypeFilter, sort: NodeTypeSort, first: Int, after: String): NodeTypeConnection!
+  library(origin: Origin!, libraryId: ID!): Library
+  libraries(filter: LibraryFilter, sort: LibrarySort, first: Int, after: String): LibraryConnection!
+  libraryVersion(origin: Origin!, libraryId: ID!, version: String!, assemblyVersion: String!): LibraryVersion
+  path(documentId: ID!, versionId: ID!, fromNodeId: ID!, toNodeId: ID!, maxHops: Int = 8): DataflowPath
+  matchSubgraph(pattern: SubgraphPatternInput!, scope: MatchScopeInput, options: MatchOptionsInput, first: Int, after: String): SubgraphMatchConnection!
+}
+
+type Mutation {
+  forkDocument(input: ForkDocumentInput!): ForkDocumentPayload!
+  createDocument(input: CreateDocumentInput!): DocumentPayload!
+  commitDocument(input: CommitDocumentInput!): CommitDocumentPayload!
+  mergeDocument(input: MergeDocumentInput!): CommitDocumentPayload!
+  applyGraphPatch(input: GraphPatchInput!): GraphPatchPayload!
+  wirePorts(input: WirePortsInput!): GraphPatchPayload!
+  unwirePorts(input: UnwirePortsInput!): GraphPatchPayload!
+  moveNode(input: MoveNodeInput!): GraphPatchPayload!
+  setExtensions(input: SetExtensionsMutationInput!): GraphPatchPayload!
+  importSnapshot(input: ImportSnapshotInput!): ImportSnapshotPayload!
+}
+
+type PageInfo {
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  startCursor: String
+  endCursor: String
+}
+
+type ExtensionProperty {
+  key: String!
+  value: JSON
+}
+
+type CountBucket {
+  key: String!
+  count: Int!
+}
+
+type Document implements Entity {
+  """Opaque refetch key. Store identity is documentId + versionId."""
+  id: ID!
+  documentId: ID!
+  versionId: ID!
+  origin: Origin!
+  committed: Boolean!
+  fileName: String
+  filePath: String
+  isNested: Boolean
+  fileCreationTimeUtc: DateTime
+  fileLastWriteTimeUtc: DateTime
+  extensions: [ExtensionProperty!]!
+  extension(key: String!): JSON
+  nodes(filter: NodeFilter, sort: NodeSort, first: Int, after: String): NodeConnection!
+  nestedDocuments: [Document!]!
+  parentDocuments: [Document!]!
+  basedOn: [Document!]!
+  derivedDocuments: [Document!]!
+  historyAncestors(minHops: Int = 1, maxHops: Int = 1): [Document!]!
+  historyDescendants(minHops: Int = 1, maxHops: Int = 1): [Document!]!
+  libraries: [LibraryVersion!]!
+  isolatedNodes: [Node!]!
+  graph: DocumentGraph!
+  stats: DocumentStats!
+}
+
+type DocumentGraph {
+  nodes: [Node!]!
+  ports: [Port!]!
+  edges: [Edge!]!
+}
+
+type DocumentStats {
+  nodeCount: Int!
+  portCount: Int!
+  edgeCount: Int!
+  countsByKind: [CountBucket!]!
+  countsByTypeId: [CountBucket!]!
+}
+
+type Node implements Entity {
+  id: ID!
+  versionId: ID!
+  nodeId: ID!
+  origin: Origin
+  typeId: String
+  name: String
+  nickName: String
+  kind: NodeKind
+  locked: Boolean
+  x: Float
+  y: Float
+  source: String
+  language: String
+  text: String
+  extensions: [ExtensionProperty!]!
+  extension(key: String!): JSON
+  document: Document
+  ports(direction: PortDirection): [Port!]!
+  nodeType: NodeType
+  groups: [Node!]!
+  members: [Node!]!
+  clusterDocument: Document
+  outgoing: [Node!]!
+  incoming: [Node!]!
+  downstream(minHops: Int = 1, maxHops: Int = 1): [Node!]!
+  upstream(minHops: Int = 1, maxHops: Int = 1): [Node!]!
+}
+
+type Port implements Entity {
+  id: ID!
+  versionId: ID!
+  portId: ID!
+  nodeId: ID
+  name: String
+  direction: PortDirection
+  access: String
+  extensions: [ExtensionProperty!]!
+  extension(key: String!): JSON
+  node: Node
+  incomingEdges: [Edge!]!
+  outgoingEdges: [Edge!]!
+}
+
+type Edge implements Entity {
+  id: ID!
+  versionId: ID!
+  sourcePortId: ID!
+  targetPortId: ID!
+  sourceName: String
+  targetName: String
+  extensions: [ExtensionProperty!]!
+  extension(key: String!): JSON
+  source: Port
+  target: Port
+  sourceNode: Node
+  targetNode: Node
+}
+
+type NodeType implements Entity {
+  id: ID!
+  origin: Origin!
+  typeId: ID!
+  name: String
+  extensions: [ExtensionProperty!]!
+  instances(filter: NodeFilter, sort: NodeSort, first: Int, after: String): NodeConnection!
+  definedBy: [LibraryVersion!]!
+}
+
+type Library implements Entity {
+  id: ID!
+  origin: Origin!
+  libraryId: ID!
+  name: String
+  author: String
+  extensions: [ExtensionProperty!]!
+  versions: [LibraryVersion!]!
+}
+
+type LibraryVersion implements Entity {
+  id: ID!
+  origin: Origin!
+  libraryId: ID!
+  version: String!
+  assemblyVersion: String!
+  name: String
+  author: String
+  extensions: [ExtensionProperty!]!
+  library: Library
+  documents(sort: DocumentSort, first: Int, after: String): DocumentConnection!
+  nodeTypes: [NodeType!]!
+}
+
+type DataflowPath {
+  nodes: [Node!]!
+  ports: [Port!]!
+  edges: [Edge!]!
+}
+
+type DocumentConnection {
+  edges: [DocumentEdge!]!
+  nodes: [Document!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type DocumentEdge {
+  cursor: String!
+  node: Document!
+}
+
+type NodeConnection {
+  edges: [NodeEdge!]!
+  nodes: [Node!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type NodeEdge {
+  cursor: String!
+  node: Node!
+}
+
+type PortConnection {
+  edges: [PortEdge!]!
+  nodes: [Port!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type PortEdge {
+  cursor: String!
+  node: Port!
+}
+
+type EdgeConnection {
+  edges: [EdgeEdge!]!
+  nodes: [Edge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type EdgeEdge {
+  cursor: String!
+  node: Edge!
+}
+
+type NodeTypeConnection {
+  edges: [NodeTypeEdge!]!
+  nodes: [NodeType!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type NodeTypeEdge {
+  cursor: String!
+  node: NodeType!
+}
+
+type LibraryConnection {
+  edges: [LibraryEdge!]!
+  nodes: [Library!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type LibraryEdge {
+  cursor: String!
+  node: Library!
+}
+
+type SubgraphMatchConnection {
+  edges: [SubgraphMatchEdge!]!
+  nodes: [SubgraphMatch!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type SubgraphMatchEdge {
+  cursor: String!
+  node: SubgraphMatch!
+}
+
+type SubgraphMatch {
+  document: Document
+  nodes: [NodeBinding!]!
+  ports: [PortBinding!]!
+  edges: [EdgeBinding!]!
+  connections: [ConnectionRealization!]!
+}
+
+type NodeBinding {
+  key: ID!
+  node: Node!
+}
+
+type PortBinding {
+  key: ID!
+  port: Port!
+}
+
+type EdgeBinding {
+  key: ID!
+  edge: Edge!
+}
+
+type ConnectionRealization {
+  key: ID
+  ports: [Port!]!
+  edges: [Edge!]!
+}
+
+input DocumentSort {
+  field: DocumentSortField = DOCUMENT_ID
+  direction: SortDirection = ASC
+}
+
+input NodeSort {
+  field: NodeSortField = NODE_ID
+  direction: SortDirection = ASC
+}
+
+input PortSort {
+  field: PortSortField = PORT_ID
+  direction: SortDirection = ASC
+}
+
+input EdgeSort {
+  field: EdgeSortField = VERSION_ID
+  direction: SortDirection = ASC
+}
+
+input NodeTypeSort {
+  field: NodeTypeSortField = TYPE_ID
+  direction: SortDirection = ASC
+}
+
+input LibrarySort {
+  field: LibrarySortField = LIBRARY_ID
+  direction: SortDirection = ASC
+}
+
+input DocumentFilter {
+  origin: Origin
+  isNested: Boolean
+  committed: Boolean
+  fileNameContains: String
+  documentId: ID
+  versionId: ID
+  libraryId: ID
+  createdAfterUtc: DateTime
+  createdBeforeUtc: DateTime
+  extensions: [ExtensionPredicateInput!]
+}
+
+input NodeFilter {
+  versionId: ID
+  documentId: ID
+  origin: Origin
+  kind: NodeKind
+  typeId: String
+  name: String
+  nickName: String
+  locked: Boolean
+  language: String
+  hasSource: Boolean
+  bbox: BoundingBoxInput
+  extensions: [ExtensionPredicateInput!]
+}
+
+input PortFilter {
+  versionId: ID
+  nodeId: ID
+  name: String
+  direction: PortDirection
+  access: String
+  extensions: [ExtensionPredicateInput!]
+}
+
+input EdgeFilter {
+  versionId: ID
+  sourcePortId: ID
+  targetPortId: ID
+  extensions: [ExtensionPredicateInput!]
+}
+
+input NodeTypeFilter {
+  origin: Origin
+  typeId: ID
+  nameContains: String
+  extensions: [ExtensionPredicateInput!]
+}
+
+input LibraryFilter {
+  origin: Origin
+  libraryId: ID
+  nameContains: String
+  extensions: [ExtensionPredicateInput!]
+}
+
+input BoundingBoxInput {
+  minX: Float!
+  minY: Float!
+  maxX: Float!
+  maxY: Float!
+}
+
+input ExtensionPredicateInput {
+  key: String!
+  equals: JSON
+}
+
+input SubgraphPatternInput {
+  nodes: [PatternNodeInput!]!
+  ports: [PatternPortInput!]
+  edges: [PatternEdgeInput!]
+  connections: [PatternConnectionInput!]
+}
+
+input PatternNodeInput {
+  key: ID!
+  typeId: String
+  kind: NodeKind
+  name: String
+  nickName: String
+  locked: Boolean
+  language: String
+  origin: Origin
+  extensions: [ExtensionPredicateInput!]
+}
+
+input PatternPortInput {
+  key: ID!
+  node: ID!
+  name: String
+  direction: PortDirection
+  access: String
+}
+
+input PatternEdgeInput {
+  key: ID
+  sourcePort: ID!
+  targetPort: ID!
+}
+
+input PatternConnectionInput {
+  key: ID
+  sourceNode: ID!
+  targetNode: ID!
+  sourcePortName: String
+  targetPortName: String
+  sourceDirection: PortDirection
+  targetDirection: PortDirection
+  minHops: Int = 1
+  maxHops: Int = 1
+}
+
+input MatchScopeInput {
+  versionId: ID
+  documentId: ID
+  origin: Origin
+  includeNested: Boolean = false
+}
+
+input MatchOptionsInput {
+  injective: Boolean = true
+  induced: Boolean = false
+}
+
+input ForkDocumentInput {
+  documentId: ID!
+  versionId: ID!
+  newDocumentId: ID
+}
+
+input CreateDocumentInput {
+  documentId: ID
+  fileName: String
+}
+
+input CommitDocumentInput {
+  documentId: ID!
+  versionId: ID!
+}
+
+input DocumentKeyInput {
+  documentId: ID!
+  versionId: ID!
+}
+
+input MergeDocumentInput {
+  documentId: ID!
+  versionId: ID!
+  otherParents: [DocumentKeyInput!]!
+}
+
+input GraphPatchInput {
+  documentId: ID!
+  versionId: ID!
+  createNodes: [CreateNodeInput!]
+  updateNodes: [UpdateNodeInput!]
+  deleteNodes: [ID!]
+  createPorts: [CreatePortInput!]
+  updatePorts: [UpdatePortInput!]
+  deletePorts: [ID!]
+  createEdges: [CreateEdgeInput!]
+  deleteEdges: [DeleteEdgeInput!]
+  addToGroups: [GroupMembershipInput!]
+  removeFromGroups: [GroupMembershipInput!]
+  setExtensions: [SetExtensionsInput!]
+}
+
+input CreateNodeInput {
+  nodeId: ID!
+  origin: Origin = GRAPHROOTS
+  typeId: String
+  name: String
+  nickName: String
+  kind: NodeKind
+  locked: Boolean
+  x: Float
+  y: Float
+  source: String
+  language: String
+  text: String
+}
+
+input UpdateNodeInput {
+  nodeId: ID!
+  typeId: String
+  name: String
+  nickName: String
+  kind: NodeKind
+  locked: Boolean
+  x: Float
+  y: Float
+  source: String
+  language: String
+  text: String
+}
+
+input CreatePortInput {
+  portId: ID!
+  nodeId: ID!
+  name: String
+  direction: PortDirection
+  access: String
+}
+
+input UpdatePortInput {
+  portId: ID!
+  name: String
+  direction: PortDirection
+  access: String
+}
+
+input CreateEdgeInput {
+  sourcePortId: ID!
+  targetPortId: ID!
+  sourceName: String
+  targetName: String
+}
+
+input DeleteEdgeInput {
+  sourcePortId: ID!
+  targetPortId: ID!
+}
+
+input GroupMembershipInput {
+  memberNodeId: ID!
+  groupNodeId: ID!
+}
+
+input SetExtensionsInput {
+  entity: EntityKind!
+  id: ID!
+  sourcePortId: ID
+  targetPortId: ID
+  entries: [ExtensionPredicateInput!]!
+}
+
+input WirePortsInput {
+  documentId: ID!
+  versionId: ID!
+  sourcePortId: ID!
+  targetPortId: ID!
+  sourceName: String
+  targetName: String
+}
+
+input UnwirePortsInput {
+  documentId: ID!
+  versionId: ID!
+  sourcePortId: ID!
+  targetPortId: ID!
+}
+
+input MoveNodeInput {
+  documentId: ID!
+  versionId: ID!
+  nodeId: ID!
+  x: Float!
+  y: Float!
+}
+
+input SetExtensionsMutationInput {
+  documentId: ID!
+  versionId: ID!
+  entity: EntityKind!
+  id: ID!
+  sourcePortId: ID
+  targetPortId: ID
+  entries: [ExtensionPredicateInput!]!
+}
+
+type ForkDocumentPayload {
+  document: Document!
+}
+
+type DocumentPayload {
+  document: Document!
+}
+
+type CommitDocumentPayload {
+  document: Document!
+  workingDocument: Document!
+}
+
+type GraphPatchPayload {
+  document: Document!
+  createdNodeIds: [ID!]!
+  deletedNodeIds: [ID!]!
+  createdPortIds: [ID!]!
+  deletedPortIds: [ID!]!
+}
+
+type ImportSnapshotPayload {
+  document: Document!
+  nestedDocumentCount: Int!
+  nodeCount: Int!
+  portCount: Int!
+  edgeCount: Int!
+}
+
+input ImportSnapshotInput {
+  documents: [ImportDocumentInput!]!
+  nodes: [ImportNodeInput!]
+  ports: [ImportPortInput!]
+  edges: [ImportEdgeInput!]
+  groupMemberships: [ImportGroupMembershipInput!]
+  nests: [ImportNestInput!]
+  libraries: [ImportLibraryInput!]
+  libraryVersions: [ImportLibraryVersionInput!]
+  nodeTypes: [ImportNodeTypeInput!]
+  usedBy: [ImportUsedByInput!]
+}
+
+input ImportDocumentInput {
+  documentId: ID!
+  versionId: ID!
+  origin: Origin!
+  fileName: String
+  filePath: String
+  isNested: Boolean
+  fileCreationTimeUtc: DateTime
+  fileLastWriteTimeUtc: DateTime
+  extensions: [ExtensionPredicateInput!]
+}
+
+input ImportNodeInput {
+  documentId: ID!
+  versionId: ID!
+  nodeId: ID!
+  origin: Origin!
+  typeId: String
+  name: String
+  nickName: String
+  kind: NodeKind
+  locked: Boolean
+  x: Float
+  y: Float
+  source: String
+  language: String
+  text: String
+  extensions: [ExtensionPredicateInput!]
+}
+
+input ImportPortInput {
+  documentId: ID!
+  versionId: ID!
+  nodeId: ID!
+  portId: ID!
+  name: String
+  direction: PortDirection
+  access: String
+  extensions: [ExtensionPredicateInput!]
+}
+
+input ImportEdgeInput {
+  documentId: ID!
+  versionId: ID!
+  sourcePortId: ID!
+  targetPortId: ID!
+  sourceName: String
+  targetName: String
+  extensions: [ExtensionPredicateInput!]
+}
+
+input ImportGroupMembershipInput {
+  versionId: ID!
+  memberNodeId: ID!
+  groupNodeId: ID!
+}
+
+input ImportNestInput {
+  parentDocumentId: ID!
+  parentVersionId: ID!
+  childDocumentId: ID!
+  childVersionId: ID!
+}
+
+input ImportLibraryInput {
+  origin: Origin!
+  libraryId: ID!
+  name: String
+  author: String
+  extensions: [ExtensionPredicateInput!]
+}
+
+input ImportLibraryVersionInput {
+  origin: Origin!
+  libraryId: ID!
+  version: String!
+  assemblyVersion: String
+  name: String
+  author: String
+  extensions: [ExtensionPredicateInput!]
+}
+
+input ImportNodeTypeInput {
+  origin: Origin!
+  typeId: ID!
+  name: String
+  libraryId: ID
+  version: String
+  assemblyVersion: String
+  extensions: [ExtensionPredicateInput!]
+}
+
+input ImportUsedByInput {
+  origin: Origin!
+  libraryId: ID!
+  version: String!
+  assemblyVersion: String
+  documentId: ID!
+  versionId: ID!
+}

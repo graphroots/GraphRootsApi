@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>GraphRoots.Grasshopper</RootNamespace>
+    <AssemblyName>GrasshopperInterfaces</AssemblyName>
+    <Description>GraphRoots Grasshopper parser and loader contracts</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\GraphDbInterfaces\GraphDbInterfaces.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>GraphRoots.Grasshopper</RootNamespace>
+    <AssemblyName>GrasshopperLib</AssemblyName>
+    <Description>GraphRoots Grasshopper parser and loader</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="System.Drawing.Common" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\GraphDbInterfaces\GraphDbInterfaces.csproj" />
+    <ProjectReference Include="..\GrasshopperInterfaces\GrasshopperInterfaces.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="GH_IO">
+      <HintPath>$(MSBuildThisFileDirectory)..\lib\GH_IO.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+  </ItemGroup>
+  <Target Name="EnsureGhIoDll" BeforeTargets="ResolveAssemblyReferences">
+    <Error Condition="!Exists('$(MSBuildThisFileDirectory)..\lib\GH_IO.dll')" Text="GH_IO.dll is not in lib/. Copy it from a local Rhino 8 install. See lib/README.md." />
+  </Target>
+</Project>

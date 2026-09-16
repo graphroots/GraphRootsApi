@@ -1,0 +1,72 @@
+name: graphroots-neo4j
+
+services:
+  neo4j-test:
+    image: neo4j:2026.08-community
+    ports:
+      - "127.0.0.1:17687:7687"
+      - "127.0.0.1:17474:7474"
+    environment:
+      NEO4J_AUTH: neo4j/graphroots-test
+      NEO4J_initial_dbms_default__database: graphtest
+      NEO4J_db_query_default__language: CYPHER_25
+      NEO4J_server_memory_heap_initial__size: 256m
+      NEO4J_server_memory_heap_max__size: 512m
+      NEO4J_server_memory_pagecache_size: 64m
+    volumes:
+      - neo4j-test-data:/data
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "cypher-shell",
+          "-u",
+          "neo4j",
+          "-p",
+          "graphroots-test",
+          "-d",
+          "graphtest",
+          "RETURN 1",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  neo4j-app:
+    profiles:
+      - app
+    image: neo4j:2026.08-community
+    ports:
+      - "127.0.0.1:7687:7687"
+      - "127.0.0.1:7474:7474"
+    environment:
+      NEO4J_AUTH: neo4j/graphroots-app
+      NEO4J_initial_dbms_default__database: GraphRoots
+      NEO4J_db_query_default__language: CYPHER_25
+      NEO4J_server_memory_heap_initial__size: 256m
+      NEO4J_server_memory_heap_max__size: 512m
+      NEO4J_server_memory_pagecache_size: 64m
+    volumes:
+      - neo4j-app-data:/data
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "cypher-shell",
+          "-u",
+          "neo4j",
+          "-p",
+          "graphroots-app",
+          "-d",
+          "GraphRoots",
+          "RETURN 1",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+volumes:
+  neo4j-test-data:
+  neo4j-app-data:
