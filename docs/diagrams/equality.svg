@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080" role="img" aria-labelledby="title desc">
+  <title id="title">Equality</title>
+  <desc id="desc">Uniqueness keys. Instance ids are source-tool strings scoped by VersionId. Catalog keys are Origin plus an id and are shared across versions.</desc>
+  <rect width="1920" height="1080" fill="#FFFFFF"/>
+
+  <text x="80" y="78" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700" letter-spacing="2.4" fill="#0F6E56">COMPUTATIONAL GRAPH</text>
+  <text x="80" y="132" font-family="Arial, Helvetica, sans-serif" font-size="46" font-weight="700" fill="#141414">Equality</text>
+  <text x="80" y="178" font-family="Arial, Helvetica, sans-serif" font-size="22" fill="#4A453F">The key used to merge each label. Same key, same node or edge.</text>
+
+  <text x="80" y="242" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#0F6E56">Instance graph</text>
+  <text x="280" y="242" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#4A453F">scoped by VersionId</text>
+
+  <!-- Document -->
+  <rect x="80" y="268" width="410" height="220" rx="14" fill="#FFFFFF" stroke="#141414" stroke-width="2"/>
+  <text x="108" y="316" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700" fill="#141414">Document</text>
+  <line x1="108" y1="338" x2="462" y2="338" stroke="#E4DFD8" stroke-width="1.5"/>
+  <text x="108" y="382" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#141414">DocumentId</text>
+  <text x="108" y="422" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#141414"><tspan fill="#0F6E56">+</tspan> VersionId</text>
+
+  <!-- Node -->
+  <rect x="514" y="268" width="410" height="220" rx="14" fill="#FFFFFF" stroke="#141414" stroke-width="2"/>
+  <text x="542" y="316" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700" fill="#141414">Node</text>
+  <line x1="542" y1="338" x2="896" y2="338" stroke="#E4DFD8" stroke-width="1.5"/>
+  <text x="542" y="382" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#141414">VersionId</text>
+  <text x="542" y="422" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#141414"><tspan fill="#0F6E56">+</tspan> NodeId</text>
+
+  <!-- Port -->
+  <rect x="948" y="268" width="410" height="220" rx="14" fill="#FFFFFF" stroke="#141414" stroke-width="2"/>
+  <text x="976" y="316" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700" fill="#141414">Port</text>
+  <line x1="976" y1="338" x2="1330" y2="338" stroke="#E4DFD8" stroke-width="1.5"/>
+  <text x="976" y="382" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#141414">VersionId</text>
+  <text x="976" y="422" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#141414"><tspan fill="#0F6E56">+</tspan> PortId</text>
+
+  <!-- EDGE -->
+  <rect x="1382" y="268" width="458" height="220" rx="14" fill="#FFFFFF" stroke="#141414" stroke-width="2"/>
+  <text x="1410" y="316" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700" fill="#141414">EDGE</text>
+  <line x1="1410" y1="338" x2="1812" y2="338" stroke="#E4DFD8" stroke-width="1.5"/>
+  <text x="1410" y="378" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="700" fill="#141414">VersionId</text>
+  <text x="1410" y="412" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="700" fill="#141414"><tspan fill="#0F6E56">+</tspan> SourcePortId</text>
+  <text x="1410" y="446" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="700" fill="#141414"><tspan fill="#0F6E56">+</tspan> TargetPortId</text>
+
+  <text x="80" y="548" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#0F6E56">Catalog</text>
+  <text x="190" y="548" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#4A453F">shared across versions</text>
+
+  <!-- NodeType -->
+  <rect x="80" y="576" width="560" height="200" rx="14" fill="#FFFFFF" stroke="#141414" stroke-width="2"/>
+  <text x="108" y="624" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700" fill="#141414">NodeType</text>
+  <line x1="108" y1="646" x2="612" y2="646" stroke="#E4DFD8" stroke-width="1.5"/>
+  <text x="108" y="690" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#141414">Origin</text>
+  <text x="108" y="730" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#141414"><tspan fill="#0F6E56">+</tspan> TypeId</text>
+
+  <!-- Library -->
+  <rect x="664" y="576" width="560" height="200" rx="14" fill="#FFFFFF" stroke="#141414" stroke-width="2"/>
+  <text x="692" y="624" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700" fill="#141414">Library</text>
+  <line x1="692" y1="646" x2="1196" y2="646" stroke="#E4DFD8" stroke-width="1.5"/>
+  <text x="692" y="690" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#141414">Origin</text>
+  <text x="692" y="730" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#141414"><tspan fill="#0F6E56">+</tspan> LibraryId</text>
+
+  <!-- LibraryVersion -->
+  <rect x="1248" y="576" width="592" height="200" rx="14" fill="#FFFFFF" stroke="#141414" stroke-width="2"/>
+  <text x="1276" y="620" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700" fill="#141414">LibraryVersion</text>
+  <line x1="1276" y1="640" x2="1812" y2="640" stroke="#E4DFD8" stroke-width="1.5"/>
+  <text x="1276" y="674" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="700" fill="#141414">Origin</text>
+  <text x="1276" y="700" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="700" fill="#141414"><tspan fill="#0F6E56">+</tspan> LibraryId</text>
+  <text x="1276" y="726" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="700" fill="#141414"><tspan fill="#0F6E56">+</tspan> Version</text>
+  <text x="1276" y="752" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="700" fill="#141414"><tspan fill="#0F6E56">+</tspan> AssemblyVersion</text>
+
+  <rect x="80" y="820" width="860" height="180" rx="14" fill="#F6F4F1"/>
+  <text x="112" y="868" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="700" fill="#0F6E56">Instance identity</text>
+  <text x="112" y="910" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#141414">Ids are strings from the source tool, scoped by VersionId.</text>
+  <text x="112" y="944" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#141414">The same NodeId in two versions is two nodes.</text>
+
+  <rect x="980" y="820" width="860" height="180" rx="14" fill="#E6F3EE"/>
+  <text x="1012" y="868" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="700" fill="#0F6E56">Catalog keys and VersionId</text>
+  <text x="1012" y="906" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#141414">Catalog keys are Origin plus an id, shared across versions.</text>
+  <text x="1012" y="936" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#141414">On import, VersionId is a UUID5 of the file or cluster bytes.</text>
+  <text x="1012" y="966" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#141414">A working copy gets a new random id.</text>
+</svg>

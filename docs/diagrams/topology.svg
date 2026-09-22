@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080" role="img" aria-labelledby="title desc">
+  <title id="title">Labels and relationships</title>
+  <desc id="desc">Seven Neo4j labels. Catalog types are shared. Instance nodes are scoped by VersionId. Node is one label; Kind is Operator, Parameter, Group, Annotation, or Cluster.</desc>
+  <defs>
+    <marker id="arrow" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="14" refX="12" refY="7" orient="auto">
+      <path d="M1,1 L13,7 L1,13 Z" fill="#141414"/>
+    </marker>
+    <marker id="arrow-muted" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M1,1 L11,6 L1,11 Z" fill="#4A453F"/>
+    </marker>
+  </defs>
+  <rect width="1920" height="1080" fill="#FFFFFF"/>
+
+  <text x="80" y="78" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700" letter-spacing="2.4" fill="#0F6E56">COMPUTATIONAL GRAPH</text>
+  <text x="80" y="132" font-family="Arial, Helvetica, sans-serif" font-size="46" font-weight="700" fill="#141414">Labels and relationships</text>
+  <text x="80" y="176" font-family="Arial, Helvetica, sans-serif" font-size="22" fill="#4A453F">Node is one label. Kind is Operator, Parameter, Group, Annotation, or Cluster.</text>
+
+  <rect x="80" y="212" width="1760" height="210" rx="16" fill="#E6F3EE"/>
+  <text x="112" y="252" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#0F6E56">Catalog</text>
+  <text x="230" y="252" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#1E4D40">shared across versions &#8212; not keyed by VersionId</text>
+
+  <g font-family="Arial, Helvetica, sans-serif" text-anchor="middle">
+    <rect x="180" y="288" width="230" height="88" rx="12" fill="#FFFFFF" stroke="#141414" stroke-width="2"/>
+    <text x="295" y="328" font-size="24" font-weight="700" fill="#141414">Library</text>
+    <text x="295" y="354" font-size="16" fill="#4A453F">plugin or package</text>
+
+    <rect x="570" y="288" width="230" height="88" rx="12" fill="#FFFFFF" stroke="#141414" stroke-width="2"/>
+    <text x="685" y="328" font-size="22" font-weight="700" fill="#141414">LibraryVersion</text>
+    <text x="685" y="354" font-size="16" fill="#4A453F">pinned release</text>
+
+    <rect x="935" y="288" width="230" height="88" rx="12" fill="#FFFFFF" stroke="#141414" stroke-width="2"/>
+    <text x="1050" y="328" font-size="24" font-weight="700" fill="#141414">NodeType</text>
+    <text x="1050" y="354" font-size="16" fill="#4A453F">catalog type</text>
+  </g>
+
+  <line x1="410" y1="332" x2="556" y2="332" stroke="#141414" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="483" y="318" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700" fill="#0F6E56">HAS_VERSION</text>
+
+  <line x1="800" y1="332" x2="921" y2="332" stroke="#141414" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="860" y="318" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700" fill="#0F6E56">DEFINES</text>
+
+  <rect x="80" y="458" width="1760" height="542" rx="16" fill="#F6F4F1"/>
+  <text x="112" y="506" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#0F6E56">Instance graph</text>
+  <text x="310" y="506" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#4A453F">scoped by VersionId</text>
+
+  <g font-family="Arial, Helvetica, sans-serif" text-anchor="middle">
+    <rect x="580" y="544" width="210" height="88" rx="12" fill="#FFFFFF" stroke="#141414" stroke-width="2"/>
+    <text x="685" y="584" font-size="24" font-weight="700" fill="#141414">Document</text>
+    <text x="685" y="610" font-size="16" fill="#4A453F">one version</text>
+
+    <rect x="950" y="544" width="200" height="88" rx="12" fill="#FFFFFF" stroke="#141414" stroke-width="2"/>
+    <text x="1050" y="584" font-size="24" font-weight="700" fill="#141414">Node</text>
+    <text x="1050" y="610" font-size="16" fill="#4A453F">instance</text>
+
+    <rect x="1288" y="544" width="190" height="88" rx="12" fill="#FFFFFF" stroke="#141414" stroke-width="2"/>
+    <text x="1383" y="584" font-size="24" font-weight="700" fill="#141414">Port</text>
+    <text x="1383" y="610" font-size="16" fill="#4A453F">Out &#183; source</text>
+
+    <rect x="1618" y="544" width="190" height="88" rx="12" fill="#FFFFFF" stroke="#141414" stroke-width="2"/>
+    <text x="1713" y="584" font-size="24" font-weight="700" fill="#141414">Port</text>
+    <text x="1713" y="610" font-size="16" fill="#4A453F">In &#183; target</text>
+  </g>
+
+  <line x1="685" y1="376" x2="685" y2="544" stroke="#141414" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="697" y="448" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700" fill="#0F6E56">USED_BY</text>
+
+  <line x1="1050" y1="376" x2="1050" y2="544" stroke="#141414" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="1062" y="448" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700" fill="#0F6E56">HAS_INSTANCE</text>
+
+  <line x1="790" y1="588" x2="936" y2="588" stroke="#141414" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="863" y="574" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700" fill="#0F6E56">CONTAINS</text>
+
+  <line x1="1150" y1="588" x2="1274" y2="588" stroke="#141414" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="1212" y="574" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700" fill="#0F6E56">HAS_PORT</text>
+
+  <line x1="1478" y1="588" x2="1604" y2="588" stroke="#141414" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="1541" y="574" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700" fill="#0F6E56">EDGE</text>
+
+  <text x="120" y="708" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700" letter-spacing="1.4" fill="#4A453F">OTHER RELATIONSHIPS</text>
+
+  <g font-family="Arial, Helvetica, sans-serif" text-anchor="middle">
+    <rect x="120" y="736" width="156" height="72" rx="10" fill="#FFFFFF" stroke="#4A453F" stroke-width="1.5"/>
+    <text x="198" y="766" font-size="16" font-weight="700" fill="#141414">Document</text>
+    <text x="198" y="788" font-size="14" fill="#4A453F">outer</text>
+    <line x1="276" y1="772" x2="360" y2="772" stroke="#4A453F" stroke-width="1.5" marker-end="url(#arrow-muted)"/>
+    <text x="318" y="760" font-size="13" font-weight="700" fill="#4A453F">NESTS</text>
+    <rect x="372" y="736" width="156" height="72" rx="10" fill="#FFFFFF" stroke="#4A453F" stroke-width="1.5"/>
+    <text x="450" y="766" font-size="16" font-weight="700" fill="#141414">Document</text>
+    <text x="450" y="788" font-size="14" fill="#4A453F">nested</text>
+    <text x="324" y="844" font-size="16" fill="#4A453F">outer &#8594; nested graph</text>
+
+    <rect x="756" y="736" width="156" height="72" rx="10" fill="#FFFFFF" stroke="#4A453F" stroke-width="1.5"/>
+    <text x="834" y="766" font-size="16" font-weight="700" fill="#141414">Document</text>
+    <text x="834" y="788" font-size="14" fill="#4A453F">newer</text>
+    <line x1="912" y1="772" x2="996" y2="772" stroke="#4A453F" stroke-width="1.5" marker-end="url(#arrow-muted)"/>
+    <text x="954" y="760" font-size="13" font-weight="700" fill="#4A453F">BASED_ON</text>
+    <rect x="1008" y="736" width="156" height="72" rx="10" fill="#FFFFFF" stroke="#4A453F" stroke-width="1.5"/>
+    <text x="1086" y="766" font-size="16" font-weight="700" fill="#141414">Document</text>
+    <text x="1086" y="788" font-size="14" fill="#4A453F">older</text>
+    <text x="960" y="844" font-size="16" fill="#4A453F">child &#8594; older snapshot</text>
+
+    <rect x="1392" y="736" width="156" height="72" rx="10" fill="#FFFFFF" stroke="#4A453F" stroke-width="1.5"/>
+    <text x="1470" y="766" font-size="16" font-weight="700" fill="#141414">Node</text>
+    <text x="1470" y="788" font-size="14" fill="#4A453F">member</text>
+    <line x1="1548" y1="772" x2="1632" y2="772" stroke="#4A453F" stroke-width="1.5" marker-end="url(#arrow-muted)"/>
+    <text x="1590" y="760" font-size="13" font-weight="700" fill="#4A453F">MEMBER_OF</text>
+    <rect x="1644" y="736" width="156" height="72" rx="10" fill="#FFFFFF" stroke="#4A453F" stroke-width="1.5"/>
+    <text x="1722" y="766" font-size="16" font-weight="700" fill="#141414">Node</text>
+    <text x="1722" y="788" font-size="14" fill="#4A453F">group</text>
+    <text x="1596" y="844" font-size="16" fill="#4A453F">member &#8594; group</text>
+  </g>
+</svg>

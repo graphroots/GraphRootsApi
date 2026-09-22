@@ -35,6 +35,15 @@ Shared node fields: `Kind` (`Operator`, `Parameter`, `Group`, `Annotation`, `Clu
 
 Floating GH parameters use one synthetic `Port` whose `PortId` equals the node instance GUID. `Direction` is set from EDGE incidence (`In` if only a target, `Out` if only a source, `Both` if both). Groups and annotations get no port unless they have container-level sources. Declared `param_input` / `param_output` ports stay `In` / `Out`.
 
+## Diagrams
+
+Slide-sized figures (`1920×1080` SVG) for a presentation.
+
+- [Labels and relationships](diagrams/topology.svg) — seven labels and the ten relationship types.
+- [Solver walk](diagrams/solver-walk.svg) — `Document` → `Node` → `Port` → `EDGE` → `Port` → `Node`, plus a synthetic port.
+- [Nesting, groups, and versions](diagrams/structure.svg) — `NESTS`, `MEMBER_OF`, and `BASED_ON`.
+- [Equality](diagrams/equality.svg) — the uniqueness key of each label.
+
 ## Extension properties
 
 Tool-specific data is a dictionary on the C# type (`Extensions`), flattened to Neo4j properties on write. Keys **must** be namespaced (`gh.componentGuid`, later `dyn.…`) and must not collide with a core property name (including `gh.Name`). Cypher can still filter on these keys.

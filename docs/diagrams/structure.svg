@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080" role="img" aria-labelledby="title desc">
+  <title id="title">Nesting, groups, and versions</title>
+  <desc id="desc">MEMBER_OF runs from member to group. NESTS runs from an outer document to a nested document. BASED_ON runs from a newer document to an older snapshot.</desc>
+  <defs>
+    <marker id="arrow" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="14" refX="12" refY="7" orient="auto">
+      <path d="M1,1 L13,7 L1,13 Z" fill="#141414"/>
+    </marker>
+  </defs>
+  <rect width="1920" height="1080" fill="#FFFFFF"/>
+
+  <text x="80" y="78" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700" letter-spacing="2.4" fill="#0F6E56">COMPUTATIONAL GRAPH</text>
+  <text x="80" y="132" font-family="Arial, Helvetica, sans-serif" font-size="46" font-weight="700" fill="#141414">Nesting, groups, and versions</text>
+  <text x="80" y="178" font-family="Arial, Helvetica, sans-serif" font-size="22" fill="#4A453F">Not wires. Do not read these arrows as EDGE.</text>
+
+  <!-- Group -->
+  <rect x="80" y="220" width="560" height="780" rx="18" fill="#FFFFFF" stroke="#E4DFD8" stroke-width="1.5"/>
+  <text x="116" y="284" font-family="Arial, Helvetica, sans-serif" font-size="32" font-weight="700" fill="#141414">Group</text>
+  <text x="116" y="320" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="700" letter-spacing="1.2" fill="#0F6E56">MEMBER_OF</text>
+
+  <rect x="128" y="400" width="200" height="96" rx="12" fill="#FFFFFF" stroke="#141414" stroke-width="2"/>
+  <text x="228" y="442" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#141414">Node</text>
+  <text x="228" y="470" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="16" fill="#4A453F">member</text>
+
+  <rect x="128" y="600" width="200" height="96" rx="12" fill="#FFFFFF" stroke="#141414" stroke-width="2"/>
+  <text x="228" y="642" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#141414">Node</text>
+  <text x="228" y="670" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="16" fill="#4A453F">member</text>
+
+  <rect x="400" y="468" width="200" height="160" rx="12" fill="#F6F4F1" stroke="#141414" stroke-width="2"/>
+  <text x="500" y="528" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#141414">Node</text>
+  <text x="500" y="560" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="16" fill="#4A453F">Kind = Group</text>
+
+  <line x1="328" y1="448" x2="400" y2="516" stroke="#141414" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="328" y1="648" x2="400" y2="588" stroke="#141414" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <text x="116" y="860" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#4A453F">Direction is member &#8594; group.</text>
+  <text x="116" y="892" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#4A453F">The group is a Node with Kind = Group.</text>
+
+  <!-- Cluster -->
+  <rect x="680" y="220" width="560" height="780" rx="18" fill="#FFFFFF" stroke="#E4DFD8" stroke-width="1.5"/>
+  <text x="716" y="284" font-family="Arial, Helvetica, sans-serif" font-size="32" font-weight="700" fill="#141414">Cluster</text>
+  <text x="716" y="320" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="700" letter-spacing="1.2" fill="#0F6E56">NESTS</text>
+
+  <rect x="716" y="400" width="230" height="340" rx="12" fill="#F6F4F1" stroke="#141414" stroke-width="2"/>
+  <text x="740" y="448" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#141414">Document</text>
+  <text x="740" y="476" font-family="Arial, Helvetica, sans-serif" font-size="16" fill="#4A453F">outer</text>
+
+  <rect x="740" y="530" width="182" height="150" rx="10" fill="#FFFFFF" stroke="#141414" stroke-width="2"/>
+  <text x="831" y="590" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="700" fill="#141414">Node</text>
+  <text x="831" y="620" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="15" fill="#4A453F">Kind = Cluster</text>
+
+  <rect x="1040" y="480" width="164" height="160" rx="12" fill="#FFFFFF" stroke="#141414" stroke-width="2"/>
+  <text x="1122" y="548" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="700" fill="#141414">Document</text>
+  <text x="1122" y="578" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="16" fill="#4A453F">nested</text>
+
+  <line x1="946" y1="560" x2="1040" y2="560" stroke="#141414" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="993" y="544" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="700" fill="#0F6E56">NESTS</text>
+
+  <text x="716" y="860" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#4A453F">The canvas reference has Kind = Cluster.</text>
+  <text x="716" y="892" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#4A453F">NESTS points at the nested Document.</text>
+
+  <!-- Versions -->
+  <rect x="1280" y="220" width="560" height="780" rx="18" fill="#FFFFFF" stroke="#E4DFD8" stroke-width="1.5"/>
+  <text x="1316" y="284" font-family="Arial, Helvetica, sans-serif" font-size="32" font-weight="700" fill="#141414">Versions</text>
+  <text x="1316" y="320" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="700" letter-spacing="1.2" fill="#0F6E56">BASED_ON</text>
+
+  <rect x="1410" y="380" width="300" height="92" rx="12" fill="#FFFFFF" stroke="#141414" stroke-width="2"/>
+  <text x="1560" y="422" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#141414">Document</text>
+  <text x="1560" y="450" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="16" fill="#4A453F">newer</text>
+
+  <rect x="1410" y="560" width="300" height="92" rx="12" fill="#FFFFFF" stroke="#141414" stroke-width="2"/>
+  <text x="1560" y="602" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#141414">Document</text>
+  <text x="1560" y="630" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="16" fill="#4A453F">parent snapshot</text>
+
+  <rect x="1410" y="740" width="300" height="92" rx="12" fill="#F6F4F1" stroke="#141414" stroke-width="2"/>
+  <text x="1560" y="782" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#141414">Document</text>
+  <text x="1560" y="810" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="16" fill="#4A453F">older snapshot</text>
+
+  <line x1="1560" y1="472" x2="1560" y2="560" stroke="#141414" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="1576" y="524" font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="700" fill="#0F6E56">BASED_ON</text>
+
+  <line x1="1560" y1="652" x2="1560" y2="740" stroke="#141414" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="1576" y="704" font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="700" fill="#0F6E56">BASED_ON</text>
+
+  <text x="1316" y="868" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#4A453F">The child points at the older snapshot.</text>
+  <text x="1316" y="900" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#4A453F">Imported and committed documents are snapshots.</text>
+  <text x="1316" y="932" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#4A453F">A working copy is mutable, with at most one BASED_ON.</text>
+</svg>
