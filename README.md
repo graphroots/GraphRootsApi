@@ -105,4 +105,4 @@ That container is Neo4j `2026.08-community`, database `graphtest`, Bolt `bolt://
 
 ## License
 
-[MIT](LICENSE)
+[Apache 2.0](LICENSE)
