@@ -9,6 +9,13 @@ namespace GraphRoots.Grasshopper.Parser
     /// Computes <see cref="GhExtensionKeys.StateHash"/> from a component's <c>Object</c> chunk.
     /// Items the graph already stores elsewhere (names, layout, wiring) are left out, at every depth.
     /// </summary>
+    /// <remarks>
+    /// Origin: GrasshopperDigestor (GraphHop, https://github.com/graphhop/GrasshopperDigestor). The
+    /// "Settings/state" comparison this replaces (<c>SharedRhino/GhVersionDiff.cs</c>) is Konrad Zaremba's
+    /// modification in his copy of that project (https://github.com/KonradZaremba/GrasshopperDigestor) and
+    /// compares raw object XML. GraphRoots does not keep that XML, so the normalised state is hashed at
+    /// import instead, and wiring (<c>Source</c>) is excluded because <c>EDGE</c> already records it.
+    /// </remarks>
     internal static class GhStateHash
     {
         static readonly HashSet<string> IgnoredItems = ["Name", "NickName", "Pivot", "Bounds", "Source", "SourceCount"];

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using GraphRoots.GraphApi;
@@ -335,6 +336,57 @@ public class GraphQLLiveExecutionTest
             }}");
         Assert.AreEqual("GRASSHOPPER", JsonString(read, "data", "document", "origin"));
         Assert.AreEqual(snapshot.Nodes.Count, JsonInt(read, "data", "document", "stats", "nodeCount"));
+    }
+
+    [TestMethod]
+    public async Task ImportSnapshot_StateHashRoundTripsAndFlagsOnlyTheEditedSlider()
+    {
+        const string sliderValue = "<item name=\"Value\" type_name=\"gh_double\" type_code=\"6\">0.25</item>";
+        var filePath = System.IO.Path.Combine(AppContext.BaseDirectory, "testdata", "ParserExample3_CanvasGroup.ghx");
+        var original = System.IO.File.ReadAllText(filePath);
+        var edited = original.Replace(sliderValue, sliderValue.Replace(">0.25<", ">0.75<", StringComparison.Ordinal), StringComparison.Ordinal);
+        Assert.AreNotEqual(original, edited);
+
+        var before = await ImportAndReadStateHashes(original, filePath);
+        var after = await ImportAndReadStateHashes(edited, filePath);
+
+        CollectionAssert.AreEquivalent(before.Keys.ToList(), after.Keys.ToList());
+        Assert.IsTrue(before.Values.All(n => n.Hash.Length == 64), "every stored node carries gh.stateHash");
+        var changed = before.Keys.Where(id => before[id].Hash != after[id].Hash).ToList();
+        Assert.AreEqual(1, changed.Count);
+        Assert.AreEqual("Number Slider", after[changed[0]].Name);
+    }
+
+    async Task<Dictionary<string, (string? Name, string Hash)>> ImportAndReadStateHashes(string xml, string filePath)
+    {
+        var parser = new GhxArchiveParser(new GhxArchiveConverter());
+        var context = new LoaderContext(parser.ParseArchiveString(xml), filePath, System.Text.Encoding.UTF8.GetBytes(xml));
+        var request = OperationRequestBuilder.New()
+            .SetDocument("""
+                mutation ImportSnapshot($input: ImportSnapshotInput!) {
+                  importSnapshot(input: $input) { document { documentId versionId } }
+                }
+                """)
+            .SetVariableValues(new Dictionary<string, object?> { ["input"] = ImportSnapshotGql.From(new GhxSnapshotBuilder().Build(context)) })
+            .Build();
+        var imported = (await Executor!.ExecuteAsync(request)).ToJson();
+        Assert.IsFalse(imported.Contains("\"errors\"", StringComparison.Ordinal), imported);
+
+        var documentId = JsonString(imported, "data", "importSnapshot", "document", "documentId");
+        var versionId = JsonString(imported, "data", "importSnapshot", "document", "versionId");
+        var read = await Execute($@"
+            {{
+              document(documentId: ""{documentId}"", versionId: ""{versionId}"") {{
+                graph {{ nodes {{ nodeId name stateHash: extension(key: ""gh.stateHash"") }} }}
+              }}
+            }}");
+        Assert.IsFalse(read.Contains("\"errors\"", StringComparison.Ordinal), read);
+        using var doc = JsonDocument.Parse(read);
+        return doc.RootElement.GetProperty("data").GetProperty("document").GetProperty("graph").GetProperty("nodes")
+            .EnumerateArray()
+            .ToDictionary(
+                n => n.GetProperty("nodeId").GetString()!,
+                n => (n.GetProperty("name").GetString(), n.GetProperty("stateHash").GetString() ?? ""));
     }
 
     async Task<(string DocumentId, string VersionId)> CreateBlank(string documentId)
