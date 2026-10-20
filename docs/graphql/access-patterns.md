@@ -144,6 +144,29 @@ query {
 }
 ```
 
+## Version comparison
+
+Two imports of one file, or a working copy and the snapshot it was forked from. Nodes match by `nodeId`, ports by `portId`, edges by their port pair; both documents are loaded densely, so each is subject to the dense payload limit. Changes are structured, not text: `kind` plus `before` / `after` values. Tool-specific state arrives as an `EXTENSION` change with its key (Grasshopper imports carry `gh.stateHash`, see [graph-model.md](../graph-model.md#extension-properties)); clients decide how to label it.
+
+```graphql
+query {
+  compareDocuments(
+    before: { documentId: "…", versionId: "…" }
+    after: { documentId: "…", versionId: "…" }
+    positionTolerance: 0.5
+  ) {
+    hasChanges
+    addedNodes { id }
+    removedNodes { id }
+    changedNodes { after { id nodeId } changes { kind key before after } }
+    addedEdges { id }
+    removedEdges { id }
+  }
+}
+```
+
+Select only `id` to keep the response small and refetch details later with `entity(id:)`. A removed node's `id` refers to the `before` version, so it still resolves.
+
 ## Subgraph occurrence
 
 See [subgraph-matching.md](subgraph-matching.md). Mode 1 (ports + edges) or mode 2 (connections), not both.

@@ -57,6 +57,10 @@ public sealed class QueryType : ObjectType<Query>
             .Argument("maxHops", a => a.Type<IntType>().DefaultValue(8))
             .Type<DataflowPathType>()
             .Cost(20);
+        descriptor.Field(t => t.CompareDocuments(default!, default!, default, default!, default))
+            .Description("Structural difference between two document versions, e.g. two imports of one file, or a working copy and the snapshot it was forked from.")
+            .Type<NonNullType<DocumentComparisonType>>()
+            .Cost(100);
         descriptor.Field(t => t.MatchSubgraph(default!, default, default, default, default, default!, default!, default))
             .Type<NonNullType<SubgraphMatchConnectionType>>()
             .Cost(100);

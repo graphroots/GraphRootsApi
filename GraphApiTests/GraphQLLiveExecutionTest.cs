@@ -357,7 +357,108 @@ public class GraphQLLiveExecutionTest
         Assert.AreEqual("Number Slider", after[changed[0]].Name);
     }
 
-    async Task<Dictionary<string, (string? Name, string Hash)>> ImportAndReadStateHashes(string xml, string filePath)
+    [TestMethod]
+    public async Task CompareDocuments_TwoImports_ReportsStateAndNickNameChanges()
+    {
+        const string sliderValue = "<item name=\"Value\" type_name=\"gh_double\" type_code=\"6\">0.25</item>";
+        const string nickName = "<item name=\"NickName\" type_name=\"gh_string\" type_code=\"10\">SphXY</item>";
+        var filePath = System.IO.Path.Combine(AppContext.BaseDirectory, "testdata", "ParserExample3_CanvasGroup.ghx");
+        var original = System.IO.File.ReadAllText(filePath);
+        var edited = original
+            .Replace(sliderValue, sliderValue.Replace(">0.25<", ">0.75<", StringComparison.Ordinal), StringComparison.Ordinal)
+            .Replace(nickName, nickName.Replace("SphXY", "Sphere", StringComparison.Ordinal), StringComparison.Ordinal);
+        var before = await ImportXml(original, filePath);
+        var after = await ImportXml(edited, filePath);
+
+        var json = await Execute(CompareQuery(before, after));
+        Assert.IsFalse(json.Contains("\"errors\"", StringComparison.Ordinal), json);
+        using var doc = JsonDocument.Parse(json);
+        var comparison = doc.RootElement.GetProperty("data").GetProperty("compareDocuments");
+        Assert.IsTrue(comparison.GetProperty("hasChanges").GetBoolean());
+        foreach (var list in new[] { "addedNodes", "removedNodes", "addedPorts", "removedPorts", "addedEdges", "removedEdges" })
+            Assert.AreEqual(0, comparison.GetProperty(list).GetArrayLength(), list);
+
+        var changes = comparison.GetProperty("changedNodes").EnumerateArray().ToDictionary(
+            c => c.GetProperty("after").GetProperty("name").GetString()!,
+            c => c.GetProperty("changes").EnumerateArray()
+                .Select(f => $"{f.GetProperty("kind").GetString()}:{f.GetProperty("key").GetString()}:{f.GetProperty("before")}->{f.GetProperty("after")}")
+                .ToList());
+        Assert.AreEqual(2, changes.Count, json);
+        Assert.AreEqual(1, changes["Number Slider"].Count, json);
+        StringAssert.StartsWith(changes["Number Slider"][0], "EXTENSION:gh.stateHash:");
+        CollectionAssert.AreEqual(new[] { "NICK_NAME::SphXY->Sphere" }, changes.Single(c => c.Key != "Number Slider").Value, json);
+
+        var same = await Execute(CompareQuery(before, before));
+        Assert.IsFalse(same.Contains("\"errors\"", StringComparison.Ordinal), same);
+        Assert.IsFalse(JsonBool(same, "data", "compareDocuments", "hasChanges"));
+    }
+
+    [TestMethod]
+    public async Task CompareDocuments_ForkWithPatch_ReportsAddedAndRemovedNodes()
+    {
+        var filePath = System.IO.Path.Combine(AppContext.BaseDirectory, "testdata", "ParserExample1.ghx");
+        var baseKey = await ImportXml(System.IO.File.ReadAllText(filePath), filePath);
+        var graph = await Execute($@"{{ document(documentId: ""{baseKey.DocumentId}"", versionId: ""{baseKey.VersionId}"") {{ graph {{ nodes {{ nodeId }} edges {{ sourcePortId }} }} }} }}");
+        var deletedNodeId = JsonStringAt(graph, "data", "document", "graph", "nodes", 0, "nodeId");
+
+        var fork = await Apply($@"
+            mutation {{
+              forkDocument(input: {{ documentId: ""{baseKey.DocumentId}"", versionId: ""{baseKey.VersionId}"" }}) {{
+                document {{ documentId versionId }}
+              }}
+            }}");
+        var forkKey = (
+            JsonString(fork, "data", "forkDocument", "document", "documentId"),
+            JsonString(fork, "data", "forkDocument", "document", "versionId"));
+        await Apply($@"
+            mutation {{
+              applyGraphPatch(input: {{
+                documentId: ""{forkKey.Item1}""
+                versionId: ""{forkKey.Item2}""
+                createNodes: [{{ nodeId: ""added-in-fork"", kind: PARAMETER }}]
+                deleteNodes: [""{deletedNodeId}""]
+              }}) {{ createdNodeIds }}
+            }}");
+
+        var json = await Execute(CompareQuery(baseKey, forkKey));
+        Assert.IsFalse(json.Contains("\"errors\"", StringComparison.Ordinal), json);
+        Assert.IsTrue(JsonBool(json, "data", "compareDocuments", "hasChanges"));
+        Assert.AreEqual("added-in-fork", JsonStringAt(json, "data", "compareDocuments", "addedNodes", 0, "nodeId"));
+        Assert.AreEqual(deletedNodeId, JsonStringAt(json, "data", "compareDocuments", "removedNodes", 0, "nodeId"));
+        using var doc = JsonDocument.Parse(json);
+        var comparison = doc.RootElement.GetProperty("data").GetProperty("compareDocuments");
+        Assert.AreEqual(1, comparison.GetProperty("addedNodes").GetArrayLength(), json);
+        Assert.AreEqual(1, comparison.GetProperty("removedNodes").GetArrayLength(), json);
+        Assert.AreEqual(0, comparison.GetProperty("changedNodes").GetArrayLength(), json);
+    }
+
+    [TestMethod]
+    public async Task CompareDocuments_UnknownVersion_IsNotFound()
+    {
+        var filePath = System.IO.Path.Combine(AppContext.BaseDirectory, "testdata", "ParserExample1.ghx");
+        var existing = await ImportXml(System.IO.File.ReadAllText(filePath), filePath);
+        var json = await Execute(CompareQuery(existing, (existing.DocumentId, Guid.NewGuid().ToString())));
+        StringAssert.Contains(json, "NOT_FOUND");
+    }
+
+    static string CompareQuery((string DocumentId, string VersionId) before, (string DocumentId, string VersionId) after) => $@"
+        {{
+          compareDocuments(
+            before: {{ documentId: ""{before.DocumentId}"", versionId: ""{before.VersionId}"" }}
+            after: {{ documentId: ""{after.DocumentId}"", versionId: ""{after.VersionId}"" }}
+          ) {{
+            hasChanges
+            addedNodes {{ nodeId }}
+            removedNodes {{ nodeId }}
+            changedNodes {{ after {{ nodeId name }} changes {{ kind key before after }} }}
+            addedPorts {{ portId }}
+            removedPorts {{ portId }}
+            addedEdges {{ sourcePortId targetPortId }}
+            removedEdges {{ sourcePortId targetPortId }}
+          }}
+        }}";
+
+    async Task<(string DocumentId, string VersionId)> ImportXml(string xml, string filePath)
     {
         var parser = new GhxArchiveParser(new GhxArchiveConverter());
         var context = new LoaderContext(parser.ParseArchiveString(xml), filePath, System.Text.Encoding.UTF8.GetBytes(xml));
@@ -371,9 +472,14 @@ public class GraphQLLiveExecutionTest
             .Build();
         var imported = (await Executor!.ExecuteAsync(request)).ToJson();
         Assert.IsFalse(imported.Contains("\"errors\"", StringComparison.Ordinal), imported);
+        return (
+            JsonString(imported, "data", "importSnapshot", "document", "documentId"),
+            JsonString(imported, "data", "importSnapshot", "document", "versionId"));
+    }
 
-        var documentId = JsonString(imported, "data", "importSnapshot", "document", "documentId");
-        var versionId = JsonString(imported, "data", "importSnapshot", "document", "versionId");
+    async Task<Dictionary<string, (string? Name, string Hash)>> ImportAndReadStateHashes(string xml, string filePath)
+    {
+        var (documentId, versionId) = await ImportXml(xml, filePath);
         var read = await Execute($@"
             {{
               document(documentId: ""{documentId}"", versionId: ""{versionId}"") {{
@@ -522,6 +628,8 @@ public class GraphQLLiveExecutionTest
             el = el.GetProperty(name);
         return el.GetBoolean() ? "true" : "false";
     }
+
+    static bool JsonBool(string json, params string[] path) => JsonBoolString(json, path) == "true";
 
     static string JsonStringAt(string json, params object[] path)
     {

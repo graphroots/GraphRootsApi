@@ -104,6 +104,8 @@ type Query {
   libraries(filter: LibraryFilter, sort: LibrarySort, first: Int, after: String): LibraryConnection!
   libraryVersion(origin: Origin!, libraryId: ID!, version: String!, assemblyVersion: String!): LibraryVersion
   path(documentId: ID!, versionId: ID!, fromNodeId: ID!, toNodeId: ID!, maxHops: Int = 8): DataflowPath
+  """Structural difference between two document versions, e.g. two imports of one file, or a working copy and the snapshot it was forked from."""
+  compareDocuments(before: DocumentKeyInput!, after: DocumentKeyInput!, positionTolerance: Float! = 0.5): DocumentComparison!
   matchSubgraph(pattern: SubgraphPatternInput!, scope: MatchScopeInput, options: MatchOptionsInput, first: Int, after: String): SubgraphMatchConnection!
 }
 
@@ -168,6 +170,47 @@ type DocumentGraph {
   nodes: [Node!]!
   ports: [Port!]!
   edges: [Edge!]!
+}
+
+"""Structural difference between two document versions. Nodes match by nodeId, ports by portId, edges by their port pair."""
+type DocumentComparison {
+  before: Document!
+  after: Document!
+  """True if any node was added, removed or changed, or any edge was added or removed. Port changes on a surviving node count as a PORTS change on it."""
+  hasChanges: Boolean!
+  addedNodes: [Node!]!
+  removedNodes: [Node!]!
+  changedNodes: [NodeChange!]!
+  addedPorts: [Port!]!
+  removedPorts: [Port!]!
+  addedEdges: [Edge!]!
+  removedEdges: [Edge!]!
+}
+
+type NodeChange {
+  before: Node!
+  after: Node!
+  changes: [NodeFieldChange!]!
+}
+
+type NodeFieldChange {
+  kind: NodeChangeKind!
+  """Extension key when kind is EXTENSION, e.g. gh.stateHash; null for core fields."""
+  key: String
+  before: JSON
+  after: JSON
+}
+
+"""POSITION values are { x, y }; PORTS values are the node's sorted port ids; EXTENSION covers any added, removed or changed extension value."""
+enum NodeChangeKind {
+  TYPE
+  NICK_NAME
+  POSITION
+  LOCKED
+  SOURCE
+  TEXT
+  PORTS
+  EXTENSION
 }
 
 type DocumentStats {

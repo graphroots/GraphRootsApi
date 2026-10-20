@@ -160,6 +160,41 @@ public sealed class DocumentGraphType : ObjectType<GqlDocumentGraph>
     protected override void Configure(IObjectTypeDescriptor<GqlDocumentGraph> descriptor) => descriptor.Name("DocumentGraph");
 }
 
+public sealed class DocumentComparisonType : ObjectType<GqlDocumentComparison>
+{
+    protected override void Configure(IObjectTypeDescriptor<GqlDocumentComparison> descriptor)
+    {
+        descriptor.Name("DocumentComparison");
+        descriptor.Description("Structural difference between two document versions. Nodes match by nodeId, ports by portId, edges by their port pair.");
+        descriptor.Field(t => t.HasChanges).Description("True if any node was added, removed or changed, or any edge was added or removed. Port changes on a surviving node count as a PORTS change on it.");
+    }
+}
+
+public sealed class NodeChangeType : ObjectType<NodeChange>
+{
+    protected override void Configure(IObjectTypeDescriptor<NodeChange> descriptor) => descriptor.Name("NodeChange");
+}
+
+public sealed class NodeFieldChangeType : ObjectType<NodeFieldChange>
+{
+    protected override void Configure(IObjectTypeDescriptor<NodeFieldChange> descriptor)
+    {
+        descriptor.Name("NodeFieldChange");
+        descriptor.Field(t => t.Key).Description("Extension key when kind is EXTENSION, e.g. gh.stateHash; null for core fields.");
+        descriptor.Field(t => t.Before).Type<JsonType>();
+        descriptor.Field(t => t.After).Type<JsonType>();
+    }
+}
+
+public sealed class NodeChangeKindType : EnumType<NodeChangeKind>
+{
+    protected override void Configure(IEnumTypeDescriptor<NodeChangeKind> descriptor)
+    {
+        descriptor.Name("NodeChangeKind");
+        descriptor.Description("POSITION values are { x, y }; PORTS values are the node's sorted port ids; EXTENSION covers any added, removed or changed extension value.");
+    }
+}
+
 public sealed class DocumentStatsType : ObjectType<GqlDocumentStats>
 {
     protected override void Configure(IObjectTypeDescriptor<GqlDocumentStats> descriptor) => descriptor.Name("DocumentStats");

@@ -65,6 +65,42 @@ public class Query
     public Task<LibraryVersion?> LibraryVersion(GqlOrigin origin, string libraryId, string version, string assemblyVersion, [Service] IGraphStore store, CancellationToken cancellationToken)
         => store.GetLibraryVersion(EnumMapping.ToStoreFilter(origin), libraryId, version, assemblyVersion, cancellationToken);
 
+    public async Task<GqlDocumentComparison> CompareDocuments(
+        GqlDocumentKeyInput before,
+        GqlDocumentKeyInput after,
+        [DefaultValue(DocumentComparer.DefaultPositionTolerance)] double positionTolerance,
+        [Service] IGraphStore store,
+        CancellationToken cancellationToken)
+    {
+        if (positionTolerance < 0)
+            throw GraphStoreException.InvalidArgument("positionTolerance must not be negative.");
+        var (beforeDocument, beforeGraph) = await LoadForComparison(before, "before", store, cancellationToken);
+        var (afterDocument, afterGraph) = await LoadForComparison(after, "after", store, cancellationToken);
+        var comparison = DocumentComparer.Compare(beforeGraph, afterGraph, positionTolerance);
+        return new GqlDocumentComparison
+        {
+            Before = beforeDocument,
+            After = afterDocument,
+            HasChanges = comparison.HasChanges,
+            AddedNodes = comparison.AddedNodes,
+            RemovedNodes = comparison.RemovedNodes,
+            ChangedNodes = comparison.ChangedNodes,
+            AddedPorts = comparison.AddedPorts,
+            RemovedPorts = comparison.RemovedPorts,
+            AddedEdges = comparison.AddedEdges,
+            RemovedEdges = comparison.RemovedEdges,
+        };
+    }
+
+    static async Task<(Document Document, DocumentGraphResult Graph)> LoadForComparison(
+        GqlDocumentKeyInput key, string label, IGraphStore store, CancellationToken cancellationToken)
+    {
+        var versionId = FilterMapping.ParseGuid(key.VersionId, $"{label}.versionId");
+        var document = await store.GetDocument(key.DocumentId, versionId, cancellationToken)
+            ?? throw GraphStoreException.NotFound($"{label} document '{key.DocumentId}' version '{key.VersionId}' was not found.");
+        return (document, await store.GetDocumentGraph(key.DocumentId, versionId, cancellationToken));
+    }
+
     public async Task<GqlDataflowPath?> Path(string documentId, string versionId, string fromNodeId, string toNodeId, [DefaultValue(8)] int maxHops, [Service] IGraphStore store, CancellationToken cancellationToken)
     {
         var path = await store.FindPath(documentId, FilterMapping.ParseGuid(versionId, "versionId"), fromNodeId, toNodeId, maxHops, cancellationToken);
