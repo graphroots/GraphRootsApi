@@ -26,4 +26,11 @@ public static class GhExtensionKeys
     public const string ClusterTargetPortId = "gh.clusterTargetPortId";
 
     public const string AssemblyName = "gh.assemblyName";
+
+    /// <summary>
+    /// SHA-256 (lowercase hex) of the component's archive chunk without name, nickname, layout and
+    /// wiring items. Equal across two versions of a document means the component's settings and
+    /// internal state (slider value, panel text, ...) did not change.
+    /// </summary>
+    public const string StateHash = "gh.stateHash";
 }

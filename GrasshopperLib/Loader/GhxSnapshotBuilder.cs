@@ -253,7 +253,8 @@ namespace GraphRoots.Grasshopper
                     (GhExtensionKeys.AdditionalSource, items?.GetItemByName("AdditionalSource", false)?.Value),
                     (GhExtensionKeys.ScriptText, scriptText),
                     (GhExtensionKeys.ClusterVersionId, chunk.Container.ClusterHash is Guid hash ? hash.ToString() : null),
-                    (GhExtensionKeys.ClusterParamMap, FormatParamMap(chunk.Container.ParamMap))
+                    (GhExtensionKeys.ClusterParamMap, FormatParamMap(chunk.Container.ParamMap)),
+                    (GhExtensionKeys.StateHash, GhStateHash.Compute(chunk))
                 ),
             };
         }
