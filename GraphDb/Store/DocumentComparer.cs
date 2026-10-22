@@ -21,43 +21,45 @@ public static class DocumentComparer
 
     public static DocumentComparison Compare(DocumentGraphResult before, DocumentGraphResult after, double positionTolerance = DefaultPositionTolerance)
     {
-        var beforeNodes = before.Nodes.ToDictionary(n => n.NodeId, StringComparer.Ordinal);
-        var afterNodes = after.Nodes.ToDictionary(n => n.NodeId, StringComparer.Ordinal);
-        var beforePorts = before.Ports.ToDictionary(p => p.PortId, StringComparer.OrdinalIgnoreCase);
-        var afterPorts = after.Ports.ToDictionary(p => p.PortId, StringComparer.OrdinalIgnoreCase);
-        var beforeEdges = before.Edges.ToDictionary(EdgeKey);
-        var afterEdges = after.Edges.ToDictionary(EdgeKey);
-        var beforePortsByNode = PortIdsByNode(before);
-        var afterPortsByNode = PortIdsByNode(after);
+        // Stored graphs can be odd but valid (repeated edges, port ids differing only by case), so every index
+        // keeps the first entry for a key instead of throwing. Port ids are case-insensitive throughout.
+        var beforeNodes = Index(before.Nodes, n => n.NodeId, StringComparer.Ordinal);
+        var afterNodes = Index(after.Nodes, n => n.NodeId, StringComparer.Ordinal);
+        var beforePorts = Index(before.Ports, p => p.PortId, PortIds);
+        var afterPorts = Index(after.Ports, p => p.PortId, PortIds);
+        var beforeEdges = Index(before.Edges, EdgeKey, PortIds);
+        var afterEdges = Index(after.Edges, EdgeKey, PortIds);
+        var beforePortsByNode = PortsByNode(before, beforePorts);
+        var afterPortsByNode = PortsByNode(after, afterPorts);
 
         var changed = new List<NodeChange>();
-        foreach (var node in after.Nodes.OrderBy(n => n.NodeId, StringComparer.Ordinal))
+        foreach (var node in afterNodes.Values.OrderBy(n => n.NodeId, StringComparer.Ordinal))
         {
             if (!beforeNodes.TryGetValue(node.NodeId, out var old))
                 continue;
-            var changes = CompareNode(old, node, beforePortsByNode, afterPortsByNode, positionTolerance);
+            var changes = CompareNode(
+                old,
+                node,
+                beforePortsByNode.GetValueOrDefault(old.NodeId) ?? [],
+                afterPortsByNode.GetValueOrDefault(node.NodeId) ?? [],
+                positionTolerance);
             if (changes.Count > 0)
                 changed.Add(new NodeChange { Before = old, After = node, Changes = changes });
         }
 
         return new DocumentComparison
         {
-            AddedNodes = Missing(after.Nodes, beforeNodes, n => n.NodeId),
-            RemovedNodes = Missing(before.Nodes, afterNodes, n => n.NodeId),
+            AddedNodes = Missing(afterNodes, beforeNodes, n => n.NodeId),
+            RemovedNodes = Missing(beforeNodes, afterNodes, n => n.NodeId),
             ChangedNodes = changed,
-            AddedPorts = Missing(after.Ports, beforePorts, p => p.PortId),
-            RemovedPorts = Missing(before.Ports, afterPorts, p => p.PortId),
-            AddedEdges = Missing(after.Edges, beforeEdges, EdgeKey),
-            RemovedEdges = Missing(before.Edges, afterEdges, EdgeKey),
+            AddedPorts = Missing(afterPorts, beforePorts, p => p.PortId),
+            RemovedPorts = Missing(beforePorts, afterPorts, p => p.PortId),
+            AddedEdges = Missing(afterEdges, beforeEdges, EdgeKey),
+            RemovedEdges = Missing(beforeEdges, afterEdges, EdgeKey),
         };
     }
 
-    static List<NodeFieldChange> CompareNode(
-        Node a,
-        Node b,
-        IReadOnlyDictionary<string, List<string>> beforePortsByNode,
-        IReadOnlyDictionary<string, List<string>> afterPortsByNode,
-        double positionTolerance)
+    static List<NodeFieldChange> CompareNode(Node a, Node b, List<Port> portsBefore, List<Port> portsAfter, double positionTolerance)
     {
         var changes = new List<NodeFieldChange>();
         void Add(NodeChangeKind kind, object? before, object? after, string? key = null) =>
@@ -65,22 +67,33 @@ public static class DocumentComparer
 
         if (!string.Equals(a.TypeId, b.TypeId, StringComparison.Ordinal))
             Add(NodeChangeKind.Type, a.TypeId, b.TypeId);
-        if (!string.Equals(a.NickName ?? "", b.NickName ?? "", StringComparison.Ordinal))
+        if (Differs(a.NickName, b.NickName))
             Add(NodeChangeKind.NickName, a.NickName, b.NickName);
-        if (a.X is float ax && a.Y is float ay && b.X is float bx && b.Y is float by
-            && (Math.Abs(ax - bx) > positionTolerance || Math.Abs(ay - by) > positionTolerance))
-            Add(NodeChangeKind.Position, Position(ax, ay), Position(bx, by));
+        if (PositionChanged(a, b, positionTolerance))
+            Add(NodeChangeKind.Position, Position(a), Position(b));
         if ((a.Locked ?? false) != (b.Locked ?? false))
             Add(NodeChangeKind.Locked, a.Locked ?? false, b.Locked ?? false);
-        if (!string.Equals(a.Source ?? "", b.Source ?? "", StringComparison.Ordinal))
+        if (Differs(a.Source, b.Source))
             Add(NodeChangeKind.Source, a.Source, b.Source);
-        if (!string.Equals(a.Text ?? "", b.Text ?? "", StringComparison.Ordinal))
+        if (Differs(a.Text, b.Text))
             Add(NodeChangeKind.Text, a.Text, b.Text);
 
-        var portsBefore = beforePortsByNode.GetValueOrDefault(a.NodeId) ?? [];
-        var portsAfter = afterPortsByNode.GetValueOrDefault(b.NodeId) ?? [];
-        if (!portsBefore.SequenceEqual(portsAfter, StringComparer.OrdinalIgnoreCase))
-            Add(NodeChangeKind.Ports, portsBefore, portsAfter);
+        var idsBefore = portsBefore.Select(p => p.PortId).ToList();
+        var idsAfter = portsAfter.Select(p => p.PortId).ToList();
+        if (!idsBefore.SequenceEqual(idsAfter, PortIds))
+            Add(NodeChangeKind.Ports, idsBefore, idsAfter);
+
+        // Ports present on both sides: a rename or a direction change is invisible to the id sets above. Lists are id-sorted.
+        var oldPorts = portsBefore.ToDictionary(p => p.PortId, PortIds);
+        foreach (var port in portsAfter)
+        {
+            if (!oldPorts.TryGetValue(port.PortId, out var old))
+                continue;
+            if (Differs(old.Name, port.Name))
+                Add(NodeChangeKind.PortName, old.Name, port.Name, port.PortId);
+            if (Differs(old.Direction, port.Direction))
+                Add(NodeChangeKind.PortDirection, old.Direction, port.Direction, port.PortId);
+        }
 
         var keys = (a.Extensions?.Keys ?? []).Union(b.Extensions?.Keys ?? [], StringComparer.Ordinal).Order(StringComparer.Ordinal);
         foreach (var key in keys)
@@ -93,16 +106,31 @@ public static class DocumentComparer
         return changes;
     }
 
-    static Dictionary<string, object?> Position(float x, float y) => new() { ["x"] = x, ["y"] = y };
+    // Optional text fields: missing and empty are the same.
+    static bool Differs(string? a, string? b) => !string.Equals(a ?? "", b ?? "", StringComparison.Ordinal);
+
+    // A node with only one coordinate is treated as having no position.
+    static bool HasPosition(Node n) => n.X != null && n.Y != null;
+
+    static bool PositionChanged(Node a, Node b, double tolerance)
+    {
+        if (HasPosition(a) != HasPosition(b))
+            return true;
+        return HasPosition(a)
+            && (Math.Abs(a.X!.Value - b.X!.Value) > tolerance || Math.Abs(a.Y!.Value - b.Y!.Value) > tolerance);
+    }
+
+    static Dictionary<string, object?>? Position(Node n) =>
+        HasPosition(n) ? new() { ["x"] = n.X!.Value, ["y"] = n.Y!.Value } : null;
 
     static object? ExtensionValue(Node node, string key) =>
         node.Extensions != null && node.Extensions.TryGetValue(key, out var value) ? value : null;
 
-    static Dictionary<string, List<string>> PortIdsByNode(DocumentGraphResult graph) =>
-        graph.Ports
+    static Dictionary<string, List<Port>> PortsByNode(DocumentGraphResult graph, IReadOnlyDictionary<string, Port> portsById) =>
+        portsById.Values
             .Where(p => graph.PortIdToNodeId.ContainsKey(p.PortId))
             .GroupBy(p => graph.PortIdToNodeId[p.PortId], StringComparer.Ordinal)
-            .ToDictionary(g => g.Key, g => g.Select(p => p.PortId).Order(StringComparer.OrdinalIgnoreCase).ToList(), StringComparer.Ordinal);
+            .ToDictionary(g => g.Key, g => g.OrderBy(p => p.PortId, PortIds).ToList(), StringComparer.Ordinal);
 
     // Extension values are scalars or arrays of scalars (graph-model.md), read back as driver lists.
     static bool ValuesEqual(object? a, object? b)
@@ -112,8 +140,18 @@ public static class DocumentComparer
         return Equals(a, b);
     }
 
-    static List<T> Missing<T>(IEnumerable<T> items, IReadOnlyDictionary<string, T> other, Func<T, string> key) =>
-        items.Where(item => !other.ContainsKey(key(item))).OrderBy(key, StringComparer.Ordinal).ToList();
+    static Dictionary<string, T> Index<T>(IEnumerable<T> items, Func<T, string> key, StringComparer comparer)
+    {
+        var index = new Dictionary<string, T>(comparer);
+        foreach (var item in items)
+            index.TryAdd(key(item), item);
+        return index;
+    }
 
-    static string EdgeKey(Edge edge) => $"{edge.SourcePortId}>{edge.TargetPortId}";
+    static List<T> Missing<T>(IReadOnlyDictionary<string, T> items, IReadOnlyDictionary<string, T> other, Func<T, string> key) =>
+        items.Values.Where(item => !other.ContainsKey(key(item))).OrderBy(key, StringComparer.Ordinal).ToList();
+
+    static StringComparer PortIds => StringComparer.OrdinalIgnoreCase;
+
+    static string EdgeKey(Edge edge) => $"{edge.SourcePortId}\u001f{edge.TargetPortId}";
 }

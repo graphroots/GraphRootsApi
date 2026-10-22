@@ -146,7 +146,7 @@ query {
 
 ## Version comparison
 
-Two imports of one file, or a working copy and the snapshot it was forked from. Nodes match by `nodeId`, ports by `portId`, edges by their port pair; both documents are loaded densely, so each is subject to the dense payload limit. Changes are structured, not text: `kind` plus `before` / `after` values. Tool-specific state arrives as an `EXTENSION` change with its key (Grasshopper imports carry `gh.stateHash`, see [graph-model.md](../graph-model.md#extension-properties)); clients decide how to label it.
+Two imports of one file, or a working copy and the snapshot it was forked from. Nodes match by `nodeId`, ports by `portId`, edges by their port pair; both documents are loaded densely, so each is subject to the dense payload limit. Changes are structured, not text: `kind` plus `before` / `after` values. A port present in both versions that was renamed or changed direction is reported on its node as `PORT_NAME` / `PORT_DIRECTION` with the port id in `key`; ports added or removed show as one `PORTS` change. Selecting a component in Grasshopper and saving is not a change. Comparing a version with itself returns no changes without loading the graph. Tool-specific state arrives as an `EXTENSION` change with its key (Grasshopper imports carry `gh.stateHash`, see [graph-model.md](../graph-model.md#extension-properties)); clients decide how to label it.
 
 ```graphql
 query {

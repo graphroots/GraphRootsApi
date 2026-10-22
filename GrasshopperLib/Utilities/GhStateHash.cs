@@ -7,7 +7,9 @@ namespace GraphRoots.Grasshopper.Parser
 {
     /// <summary>
     /// Computes <see cref="GhExtensionKeys.StateHash"/> from a component's <c>Object</c> chunk.
-    /// Items the graph already stores elsewhere (names, layout, wiring) are left out, at every depth.
+    /// Items the graph already stores elsewhere (names, layout, wiring) are left out, at every depth, and so is
+    /// <c>Selected</c>, the canvas selection flag Grasshopper writes into <c>Attributes</c>: selecting a component
+    /// and saving does not change the definition.
     /// </summary>
     /// <remarks>
     /// Origin: GrasshopperDigestor (GraphHop, https://github.com/graphhop/GrasshopperDigestor). The
@@ -18,7 +20,7 @@ namespace GraphRoots.Grasshopper.Parser
     /// </remarks>
     internal static class GhStateHash
     {
-        static readonly HashSet<string> IgnoredItems = ["Name", "NickName", "Pivot", "Bounds", "Source", "SourceCount"];
+        static readonly HashSet<string> IgnoredItems = ["Name", "NickName", "Pivot", "Bounds", "Selected", "Source", "SourceCount"];
 
         public static string Compute(IGhxChunk objectChunk)
         {

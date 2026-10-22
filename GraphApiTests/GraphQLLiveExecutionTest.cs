@@ -441,6 +441,78 @@ public class GraphQLLiveExecutionTest
         StringAssert.Contains(json, "NOT_FOUND");
     }
 
+    [TestMethod]
+    public async Task CompareDocuments_SelectionOnlyDifference_HasNoChanges()
+    {
+        const string selected = "<item name=\"Selected\" type_name=\"gh_bool\" type_code=\"1\">true</item>";
+        var filePath = System.IO.Path.Combine(AppContext.BaseDirectory, "testdata", "ParserExample2_VariableInputs.ghx");
+        var original = System.IO.File.ReadAllText(filePath);
+        Assert.IsTrue(original.Contains(selected, StringComparison.Ordinal));
+        var deselected = original.Replace(selected, selected.Replace(">true<", ">false<", StringComparison.Ordinal), StringComparison.Ordinal);
+        var before = await ImportXml(original, filePath);
+        var after = await ImportXml(deselected, filePath);
+        Assert.AreNotEqual(before.VersionId, after.VersionId, "different bytes give different versions");
+
+        var json = await Execute(CompareQuery(before, after));
+        Assert.IsFalse(json.Contains("\"errors\"", StringComparison.Ordinal), json);
+        Assert.IsFalse(JsonBool(json, "data", "compareDocuments", "hasChanges"), json);
+    }
+
+    [TestMethod]
+    public async Task CompareDocuments_SameVersionTwice_HasNoChanges()
+    {
+        var filePath = System.IO.Path.Combine(AppContext.BaseDirectory, "testdata", "ParserExample1.ghx");
+        var key = await ImportXml(System.IO.File.ReadAllText(filePath), filePath);
+        var json = await Execute(CompareQuery(key, key));
+        Assert.IsFalse(json.Contains("\"errors\"", StringComparison.Ordinal), json);
+        Assert.IsFalse(JsonBool(json, "data", "compareDocuments", "hasChanges"), json);
+        using var doc = JsonDocument.Parse(json);
+        var comparison = doc.RootElement.GetProperty("data").GetProperty("compareDocuments");
+        foreach (var list in new[] { "addedNodes", "removedNodes", "changedNodes", "addedPorts", "removedPorts", "addedEdges", "removedEdges" })
+            Assert.AreEqual(0, comparison.GetProperty(list).GetArrayLength(), list);
+    }
+
+    [TestMethod]
+    public async Task CompareDocuments_SameUnknownVersionTwice_IsNotFound()
+    {
+        var key = ("no-such-document", Guid.NewGuid().ToString());
+        var json = await Execute(CompareQuery(key, key));
+        StringAssert.Contains(json, "NOT_FOUND");
+    }
+
+    [TestMethod]
+    public async Task CompareDocuments_UnknownBeforeVersion_IsNotFound()
+    {
+        var filePath = System.IO.Path.Combine(AppContext.BaseDirectory, "testdata", "ParserExample1.ghx");
+        var existing = await ImportXml(System.IO.File.ReadAllText(filePath), filePath);
+        var json = await Execute(CompareQuery((existing.DocumentId, Guid.NewGuid().ToString()), existing));
+        StringAssert.Contains(json, "NOT_FOUND");
+    }
+
+    [TestMethod]
+    public async Task CompareDocuments_PortRename_IsReportedOnTheOwningNode()
+    {
+        const string portName = "<item name=\"Name\" type_name=\"gh_string\" type_code=\"10\">Tip</item>";
+        var filePath = System.IO.Path.Combine(AppContext.BaseDirectory, "testdata", "ParserExample3_CanvasGroup.ghx");
+        var original = System.IO.File.ReadAllText(filePath);
+        Assert.IsTrue(original.Contains(portName, StringComparison.Ordinal));
+        var renamed = original.Replace(portName, portName.Replace(">Tip<", ">Apex<", StringComparison.Ordinal), StringComparison.Ordinal);
+        var before = await ImportXml(original, filePath);
+        var after = await ImportXml(renamed, filePath);
+
+        var json = await Execute(CompareQuery(before, after));
+        Assert.IsFalse(json.Contains("\"errors\"", StringComparison.Ordinal), json);
+        Assert.IsTrue(JsonBool(json, "data", "compareDocuments", "hasChanges"), json);
+        using var doc = JsonDocument.Parse(json);
+        var changed = doc.RootElement.GetProperty("data").GetProperty("compareDocuments").GetProperty("changedNodes");
+        Assert.AreEqual(1, changed.GetArrayLength(), json);
+        var change = changed[0].GetProperty("changes").EnumerateArray().Single();
+        Assert.AreEqual("PORT_NAME", change.GetProperty("kind").GetString(), json);
+        Assert.IsFalse(string.IsNullOrEmpty(change.GetProperty("key").GetString()), json);
+        Assert.AreEqual("Tip", change.GetProperty("before").GetString(), json);
+        Assert.AreEqual("Apex", change.GetProperty("after").GetString(), json);
+    }
+
     static string CompareQuery((string DocumentId, string VersionId) before, (string DocumentId, string VersionId) after) => $@"
         {{
           compareDocuments(

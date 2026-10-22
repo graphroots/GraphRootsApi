@@ -43,7 +43,7 @@ public sealed class NodeFieldChange
 {
     public NodeChangeKind Kind { get; init; }
 
-    /// <summary>Extension key for <see cref="NodeChangeKind.Extension"/>; null for core fields.</summary>
+    /// <summary>Extension key for <see cref="NodeChangeKind.Extension"/>, port id for the port kinds; null for core fields.</summary>
     public string? Key { get; init; }
 
     public object? Before { get; init; }
@@ -58,7 +58,7 @@ public enum NodeChangeKind
 
     NickName,
 
-    /// <summary><see cref="Node.X"/>/<see cref="Node.Y"/> moved by more than the tolerance; values are <c>{ x, y }</c>.</summary>
+    /// <summary><see cref="Node.X"/>/<see cref="Node.Y"/> moved by more than the tolerance, or appeared or disappeared; values are <c>{ x, y }</c>, null when absent.</summary>
     Position,
 
     Locked,
@@ -69,6 +69,12 @@ public enum NodeChangeKind
 
     /// <summary>The node's set of port ids; values are the sorted ids.</summary>
     Ports,
+
+    /// <summary>A port present on both sides was renamed; <see cref="NodeFieldChange.Key"/> is the port id, values are the names.</summary>
+    PortName,
+
+    /// <summary>A port present on both sides changed direction; <see cref="NodeFieldChange.Key"/> is the port id, values are the directions.</summary>
+    PortDirection,
 
     /// <summary>An extension value was added, removed or changed; <see cref="NodeFieldChange.Key"/> names it.</summary>
     Extension,

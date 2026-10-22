@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -74,9 +75,27 @@ public class Query
     {
         if (positionTolerance < 0)
             throw GraphStoreException.InvalidArgument("positionTolerance must not be negative.");
-        var (beforeDocument, beforeGraph) = await LoadForComparison(before, "before", store, cancellationToken);
-        var (afterDocument, afterGraph) = await LoadForComparison(after, "after", store, cancellationToken);
-        var comparison = DocumentComparer.Compare(beforeGraph, afterGraph, positionTolerance);
+        var beforeVersion = FilterMapping.ParseGuid(before.VersionId, "before.versionId");
+        var afterVersion = FilterMapping.ParseGuid(after.VersionId, "after.versionId");
+        DocumentComparison comparison;
+        Document beforeDocument;
+        Document afterDocument;
+        if (beforeVersion == afterVersion && string.Equals(before.DocumentId, after.DocumentId, StringComparison.Ordinal))
+        {
+            // The same version cannot differ from itself; still verify it exists, but skip the dense graph load.
+            beforeDocument = afterDocument = await LoadDocument(before.DocumentId, beforeVersion, "before", store, cancellationToken);
+            comparison = new DocumentComparison();
+        }
+        else
+        {
+            // Every store read opens its own driver session (the driver is a thread-safe singleton), so both sides load concurrently.
+            var beforeLoad = LoadForComparison(before.DocumentId, beforeVersion, "before", store, cancellationToken);
+            var afterLoad = LoadForComparison(after.DocumentId, afterVersion, "after", store, cancellationToken);
+            await Task.WhenAll(beforeLoad, afterLoad);
+            (beforeDocument, var beforeGraph) = await beforeLoad;
+            (afterDocument, var afterGraph) = await afterLoad;
+            comparison = DocumentComparer.Compare(beforeGraph, afterGraph, positionTolerance);
+        }
         return new GqlDocumentComparison
         {
             Before = beforeDocument,
@@ -92,13 +111,18 @@ public class Query
         };
     }
 
+    static async Task<Document> LoadDocument(string documentId, Guid versionId, string label, IGraphStore store, CancellationToken cancellationToken) =>
+        await store.GetDocument(documentId, versionId, cancellationToken)
+            ?? throw GraphStoreException.NotFound($"{label} document '{documentId}' version '{versionId}' was not found.");
+
     static async Task<(Document Document, DocumentGraphResult Graph)> LoadForComparison(
-        GqlDocumentKeyInput key, string label, IGraphStore store, CancellationToken cancellationToken)
+        string documentId, Guid versionId, string label, IGraphStore store, CancellationToken cancellationToken)
     {
-        var versionId = FilterMapping.ParseGuid(key.VersionId, $"{label}.versionId");
-        var document = await store.GetDocument(key.DocumentId, versionId, cancellationToken)
-            ?? throw GraphStoreException.NotFound($"{label} document '{key.DocumentId}' version '{key.VersionId}' was not found.");
-        return (document, await store.GetDocumentGraph(key.DocumentId, versionId, cancellationToken));
+        // The graph query matches no rows for an unknown version, so it can run alongside the existence check.
+        var documentLoad = LoadDocument(documentId, versionId, label, store, cancellationToken);
+        var graphLoad = store.GetDocumentGraph(documentId, versionId, cancellationToken);
+        await Task.WhenAll(documentLoad, graphLoad);
+        return (await documentLoad, await graphLoad);
     }
 
     public async Task<GqlDataflowPath?> Path(string documentId, string versionId, string fromNodeId, string toNodeId, [DefaultValue(8)] int maxHops, [Service] IGraphStore store, CancellationToken cancellationToken)

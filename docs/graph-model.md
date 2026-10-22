@@ -50,7 +50,7 @@ Tool-specific data is a dictionary on the C# type (`Extensions`), flattened to N
 
 Grasshopper keys (see `GhExtensionKeys`): `gh.componentGuid`, `gh.scriptSource`, `gh.usingSource`, `gh.additionalSource`, `gh.scriptText`, `gh.clusterParamMap`, `gh.clusterVersionId`, `gh.clusterSourcePortId`, `gh.clusterTargetPortId`, `gh.assemblyName`, `gh.stateHash`.
 
-`gh.stateHash` is a SHA-256 of the node's GH `Object` chunk with `Name`, `NickName`, `Pivot`, `Bounds`, `Source` and `SourceCount` items removed at every depth. It exists for version comparison: two versions of a node (same `NodeId`) with equal hashes have the same settings and internal state. Renames, moves and rewiring are compared through core properties and `EDGE` instead.
+`gh.stateHash` is a SHA-256 of the node's GH `Object` chunk with `Name`, `NickName`, `Pivot`, `Bounds`, `Selected`, `Source` and `SourceCount` items removed at every depth (`Selected` is the canvas selection flag, so selecting a component and saving does not count as a change). It exists for version comparison: two versions of a node (same `NodeId`) with equal hashes have the same settings and internal state. Renames (node and port), moves and rewiring are compared through core properties, ports and `EDGE` instead.
 
 ## Mapping table
 

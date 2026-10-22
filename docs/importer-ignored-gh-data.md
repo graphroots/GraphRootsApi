@@ -82,7 +82,7 @@ Present in essentially every testdata and testdataExt GHX.
 
 ## 3. Parameter values (`PersistentData`) — largest semantic gap
 
-These values are still not stored, but a change to them is detectable: they are part of each node's `gh.stateHash` ([graph-model.md](graph-model.md#extension-properties)).
+These values are still not stored, but a change to them is detectable: they are part of each node's `gh.stateHash` ([graph-model.md](graph-model.md#extension-properties)), which leaves out only data the graph stores elsewhere (names, `Pivot`, `Bounds`, wiring) and the canvas selection flag `Selected`.
 
 Trees of `PersistentData` → `Branch` (`Path`, `Count`) → `Item` hold **internalized values**. The importer records that the param exists and how it is wired, not the value. In testdata this is already true for Sphere radius, planes, and ShapeDiver Document Payload. testdataExt scale: ~16k `PersistentData` chunks.
 

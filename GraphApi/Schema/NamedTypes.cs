@@ -180,7 +180,7 @@ public sealed class NodeFieldChangeType : ObjectType<NodeFieldChange>
     protected override void Configure(IObjectTypeDescriptor<NodeFieldChange> descriptor)
     {
         descriptor.Name("NodeFieldChange");
-        descriptor.Field(t => t.Key).Description("Extension key when kind is EXTENSION, e.g. gh.stateHash; null for core fields.");
+        descriptor.Field(t => t.Key).Description("Extension key when kind is EXTENSION (e.g. gh.stateHash), port id when kind is PORT_NAME or PORT_DIRECTION; null otherwise.");
         descriptor.Field(t => t.Before).Type<JsonType>();
         descriptor.Field(t => t.After).Type<JsonType>();
     }
@@ -191,7 +191,7 @@ public sealed class NodeChangeKindType : EnumType<NodeChangeKind>
     protected override void Configure(IEnumTypeDescriptor<NodeChangeKind> descriptor)
     {
         descriptor.Name("NodeChangeKind");
-        descriptor.Description("POSITION values are { x, y }; PORTS values are the node's sorted port ids; EXTENSION covers any added, removed or changed extension value.");
+        descriptor.Description("POSITION values are { x, y } (null when the node has no coordinates); PORTS values are the node's sorted port ids; PORT_NAME and PORT_DIRECTION report a port present on both sides, keyed by port id; EXTENSION covers any added, removed or changed extension value.");
     }
 }
 

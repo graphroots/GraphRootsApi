@@ -66,5 +66,35 @@ namespace GraphRoots.GraphDbTests
             foreach (var id in before.Keys)
                 Assert.AreEqual(Hash(before[id]), Hash(after[id]), $"node {id} ({before[id].Name})");
         }
+
+        [TestMethod]
+        public void StateHash_IgnoresSelection()
+        {
+            var path = TestUtilities.TestFilePath("ParserExample2_VariableInputs.ghx");
+            var xml = File.ReadAllText(path);
+            const string selected = "<item name=\"Selected\" type_name=\"gh_bool\" type_code=\"1\">true</item>";
+            Assert.IsTrue(xml.Contains(selected), "fixture has selected components");
+            var deselected = xml.Replace(selected, selected.Replace(">true<", ">false<"));
+
+            var before = Build(xml);
+            var after = Build(deselected);
+
+            CollectionAssert.AreEquivalent(before.Keys.ToList(), after.Keys.ToList());
+            foreach (var id in before.Keys)
+                Assert.AreEqual(Hash(before[id]), Hash(after[id]), $"node {id} ({before[id].Name})");
+        }
+
+        [TestMethod]
+        public void StateHash_ChangesWhenAParameterFlagIsToggled()
+        {
+            const string hidden = "<item name=\"Hidden\" type_name=\"gh_bool\" type_code=\"1\">true</item>";
+            var xml = File.ReadAllText(FixturePath);
+            Assert.AreEqual(1, Regex.Matches(xml, Regex.Escape(hidden)).Count);
+
+            var before = Build(xml);
+            var after = Build(xml.Replace(hidden, hidden.Replace(">true<", ">false<")));
+
+            Assert.AreEqual(1, before.Keys.Count(id => Hash(before[id]) != Hash(after[id])));
+        }
     }
 }

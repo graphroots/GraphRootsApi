@@ -195,13 +195,13 @@ type NodeChange {
 
 type NodeFieldChange {
   kind: NodeChangeKind!
-  """Extension key when kind is EXTENSION, e.g. gh.stateHash; null for core fields."""
+  """Extension key when kind is EXTENSION (e.g. gh.stateHash), port id when kind is PORT_NAME or PORT_DIRECTION; null otherwise."""
   key: String
   before: JSON
   after: JSON
 }
 
-"""POSITION values are { x, y }; PORTS values are the node's sorted port ids; EXTENSION covers any added, removed or changed extension value."""
+"""POSITION values are { x, y } (null when the node has no coordinates); PORTS values are the node's sorted port ids; PORT_NAME and PORT_DIRECTION report a port present on both sides, keyed by port id; EXTENSION covers any added, removed or changed extension value."""
 enum NodeChangeKind {
   TYPE
   NICK_NAME
@@ -210,6 +210,8 @@ enum NodeChangeKind {
   SOURCE
   TEXT
   PORTS
+  PORT_NAME
+  PORT_DIRECTION
   EXTENSION
 }
 
