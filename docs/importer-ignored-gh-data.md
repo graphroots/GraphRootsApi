@@ -27,7 +27,7 @@ flowchart LR
 - **Document:** `DocumentID`, content-hash `VersionId`, file name/path/timestamps, `IsNested`. Nested cluster `FileName` comes from `DefinitionProperties.Name`.
 - **Node:** instance GUID, type GUID/name, `Name`/`NickName`, `Kind`, `Locked`, pivot `X`/`Y`, scribble `Text`, script `Source`/`Language`, `gh.`* script and cluster extensions.
 - **Port:** instance GUID, `Name`, `Direction`, `Access` (`item`/`list`/`tree`).
-- **Edge:** `Source` GUID lists as `EDGE`; cluster `ParamMap` as edge/node extensions.
+- **Edge:** `Source` GUID lists as `EDGE`; cluster `ParamMap` as edge/node extensions. A `Source` GUID with no matching object (a dangling wire, e.g. in a hand-edited file) is skipped.
 - **Group membership:** container `ID` GUIDs as `MEMBER_OF` (colour/border not stored).
 - **Libraries:** `Id`, `Name`, `Author`, `Version`, `AssemblyVersion`, `gh.assemblyName`.
 

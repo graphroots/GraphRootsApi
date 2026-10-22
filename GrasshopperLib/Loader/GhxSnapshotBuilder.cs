@@ -436,8 +436,10 @@ namespace GraphRoots.Grasshopper
             foreach (var source in sources.Sources)
             {
                 var sourcePortId = Id(source);
+                // A Source GUID with no matching object (a dangling wire, e.g. in a hand-edited file) is skipped
+                // rather than failing the import; Grasshopper tolerates it too.
                 if (!portById.TryGetValue(sourcePortId, out var sourcePort))
-                    throw new InvalidOperationException($"No source found for {source}");
+                    continue;
 
                 string? clusterSource = null;
                 if (ownerByPort.TryGetValue(source, out var sourceOwner)
