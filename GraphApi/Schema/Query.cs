@@ -75,22 +75,22 @@ public class Query
     {
         if (positionTolerance < 0)
             throw GraphStoreException.InvalidArgument("positionTolerance must not be negative.");
-        var beforeVersion = FilterMapping.ParseGuid(before.VersionId, "before.versionId");
-        var afterVersion = FilterMapping.ParseGuid(after.VersionId, "after.versionId");
+        var beforeVersion = FilterMapping.ParseGuid(before.VersionId, $"{nameof(before)}.versionId");
+        var afterVersion = FilterMapping.ParseGuid(after.VersionId, $"{nameof(after)}.versionId");
         DocumentComparison comparison;
         Document beforeDocument;
         Document afterDocument;
         if (beforeVersion == afterVersion && string.Equals(before.DocumentId, after.DocumentId, StringComparison.Ordinal))
         {
             // The same version cannot differ from itself; still verify it exists, but skip the dense graph load.
-            beforeDocument = afterDocument = await LoadDocument(before.DocumentId, beforeVersion, "before", store, cancellationToken);
+            beforeDocument = afterDocument = await LoadDocument(before.DocumentId, beforeVersion, nameof(before), store, cancellationToken);
             comparison = new DocumentComparison();
         }
         else
         {
             // Every store read opens its own driver session (the driver is a thread-safe singleton), so both sides load concurrently.
-            var beforeLoad = LoadForComparison(before.DocumentId, beforeVersion, "before", store, cancellationToken);
-            var afterLoad = LoadForComparison(after.DocumentId, afterVersion, "after", store, cancellationToken);
+            var beforeLoad = LoadForComparison(before.DocumentId, beforeVersion, nameof(before), store, cancellationToken);
+            var afterLoad = LoadForComparison(after.DocumentId, afterVersion, nameof(after), store, cancellationToken);
             await Task.WhenAll(beforeLoad, afterLoad);
             (beforeDocument, var beforeGraph) = await beforeLoad;
             (afterDocument, var afterGraph) = await afterLoad;
