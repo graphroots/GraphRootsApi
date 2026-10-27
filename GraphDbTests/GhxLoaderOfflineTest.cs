@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using GraphRoots.GraphDb;
 using GraphRoots.Grasshopper;
 using GraphRoots.Grasshopper.Parser;
@@ -105,6 +107,36 @@ namespace GraphRoots.GraphDbTests
             var nodeIds = nodes.Select(n => n.NodeId).ToHashSet(StringComparer.OrdinalIgnoreCase);
             foreach (var port in ports.Where(p => nodeIds.Contains(p.PortId)))
                 Assert.AreEqual(ExpectedSyntheticDirection(port.PortId, edges), port.Direction, port.PortId);
+        }
+
+        [TestMethod]
+        public void Load_DanglingSource_SkipsOnlyThatWire()
+        {
+            // Point one wire at an object that does not exist, as in a hand-edited file.
+            var original = TestUtilities.TestFilePath("ParserExample1.ghx");
+            var text = File.ReadAllText(original);
+            var source = Regex.Match(text, @"<item name=""Source"" index=""0"" type_name=""gh_guid"" type_code=""9"">([0-9a-fA-F-]+)</item>");
+            Assert.IsTrue(source.Success, "Fixture has no wire.");
+            var missing = Guid.NewGuid().ToString();
+            var path = Path.Combine(Path.GetTempPath(), $"DanglingSource_{Guid.NewGuid():N}.ghx");
+            File.WriteAllText(path, text.Remove(source.Groups[1].Index, source.Groups[1].Length).Insert(source.Groups[1].Index, missing));
+            try
+            {
+                var intact = Builder.Build(LoaderContext.FromFile(Parser, original));
+                var snapshot = Builder.Build(LoaderContext.FromFile(Parser, path));
+                ImportSnapshotValidator.Validate(snapshot);
+
+                Assert.AreEqual(intact.Nodes.Count, snapshot.Nodes.Count);
+                Assert.AreEqual(intact.Edges.Count - 1, snapshot.Edges.Count);
+                Assert.IsFalse(snapshot.Edges.Any(e => string.Equals(e.SourcePortId, missing, StringComparison.OrdinalIgnoreCase)));
+                Assert.IsTrue(snapshot.Edges.All(e =>
+                    snapshot.Ports.Any(p => p.PortId == e.SourcePortId) &&
+                    snapshot.Ports.Any(p => p.PortId == e.TargetPortId)));
+            }
+            finally
+            {
+                File.Delete(path);
+            }
         }
 
         [TestMethod]

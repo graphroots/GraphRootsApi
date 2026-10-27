@@ -27,7 +27,7 @@ flowchart LR
 - **Document:** `DocumentID`, content-hash `VersionId`, file name/path/timestamps, `IsNested`. Nested cluster `FileName` comes from `DefinitionProperties.Name`.
 - **Node:** instance GUID, type GUID/name, `Name`/`NickName`, `Kind`, `Locked`, pivot `X`/`Y`, scribble `Text`, script `Source`/`Language`, `gh.`* script and cluster extensions.
 - **Port:** instance GUID, `Name`, `Direction`, `Access` (`item`/`list`/`tree`).
-- **Edge:** `Source` GUID lists as `EDGE`; cluster `ParamMap` as edge/node extensions.
+- **Edge:** `Source` GUID lists as `EDGE`; cluster `ParamMap` as edge/node extensions. A `Source` GUID with no matching object (a dangling wire, e.g. in a hand-edited file) is skipped.
 - **Group membership:** container `ID` GUIDs as `MEMBER_OF` (colour/border not stored).
 - **Libraries:** `Id`, `Name`, `Author`, `Version`, `AssemblyVersion`, `gh.assemblyName`.
 
@@ -82,6 +82,8 @@ Present in essentially every testdata and testdataExt GHX.
 
 ## 3. Parameter values (`PersistentData`) — largest semantic gap
 
+These values are still not stored, but a change to them is detectable: they are part of each node's `gh.stateHash` ([graph-model.md](graph-model.md#extension-properties)), which leaves out only data the graph stores elsewhere (names, `Pivot`, `Bounds`, wiring) and the canvas selection flag `Selected`.
+
 Trees of `PersistentData` → `Branch` (`Path`, `Count`) → `Item` hold **internalized values**. The importer records that the param exists and how it is wired, not the value. In testdata this is already true for Sphere radius, planes, and ShapeDiver Document Payload. testdataExt scale: ~16k `PersistentData` chunks.
 
 Stored types seen: `gh_double`, `gh_int32`, `gh_bool`, `gh_string`, `gh_guid`, `gh_point3d`, `gh_plane`, `gh_interval1d`/`2d`, `gh_drawing_color`, `gh_drawing_bitmap`, `gh_line`, `gh_bytearray`.
@@ -104,6 +106,8 @@ On inputs/outputs, testdataExt also has (never parsed into `IGhxChunkParam*` exc
 ---
 
 ## 5. Component-specific state (by family)
+
+As with parameter values, this state is not stored but is covered by `gh.stateHash`, so a changed slider value or panel text shows up when comparing versions.
 
 Generic leftover on `Container` (and nested chunks). testdata already covers the first four families; testdataExt adds the rest.
 

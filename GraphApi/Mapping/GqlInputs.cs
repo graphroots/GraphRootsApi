@@ -465,6 +465,20 @@ public sealed class GqlDocumentGraph
     public IReadOnlyList<Edge> Edges { get; init; } = [];
 }
 
+public sealed class GqlDocumentComparison
+{
+    public required Document Before { get; init; }
+    public required Document After { get; init; }
+    public bool HasChanges { get; init; }
+    public IReadOnlyList<Node> AddedNodes { get; init; } = [];
+    public IReadOnlyList<Node> RemovedNodes { get; init; } = [];
+    public IReadOnlyList<NodeChange> ChangedNodes { get; init; } = [];
+    public IReadOnlyList<Port> AddedPorts { get; init; } = [];
+    public IReadOnlyList<Port> RemovedPorts { get; init; } = [];
+    public IReadOnlyList<Edge> AddedEdges { get; init; } = [];
+    public IReadOnlyList<Edge> RemovedEdges { get; init; } = [];
+}
+
 public sealed class GqlDocumentStats
 {
     public int NodeCount { get; init; }

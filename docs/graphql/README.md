@@ -73,6 +73,7 @@ dotnet test GraphDbTests --settings docker/neo4j/live-tests.runsettings
 | Collection `first` | default 50, max 500 |
 | Match `first` | max 100; required when unscoped |
 | Dense `Document.graph` / `importSnapshot` | 100 000 entities across nodes+ports+edges (`RESULT_TOO_LARGE`) |
+| `compareDocuments` | field cost 100; loads both documents densely, each under the dense limit above |
 | Patch operations | 500 (200 nodes / 400 ports / 400 edges) |
 
 ## Errors

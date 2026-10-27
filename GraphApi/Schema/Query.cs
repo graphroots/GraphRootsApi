@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -64,6 +65,65 @@ public class Query
 
     public Task<LibraryVersion?> LibraryVersion(GqlOrigin origin, string libraryId, string version, string assemblyVersion, [Service] IGraphStore store, CancellationToken cancellationToken)
         => store.GetLibraryVersion(EnumMapping.ToStoreFilter(origin), libraryId, version, assemblyVersion, cancellationToken);
+
+    public async Task<GqlDocumentComparison> CompareDocuments(
+        GqlDocumentKeyInput before,
+        GqlDocumentKeyInput after,
+        [DefaultValue(DocumentComparer.DefaultPositionTolerance)] double positionTolerance,
+        [Service] IGraphStore store,
+        CancellationToken cancellationToken)
+    {
+        if (positionTolerance < 0)
+            throw GraphStoreException.InvalidArgument("positionTolerance must not be negative.");
+        var beforeVersion = FilterMapping.ParseGuid(before.VersionId, $"{nameof(before)}.versionId");
+        var afterVersion = FilterMapping.ParseGuid(after.VersionId, $"{nameof(after)}.versionId");
+        DocumentComparison comparison;
+        Document beforeDocument;
+        Document afterDocument;
+        if (beforeVersion == afterVersion && string.Equals(before.DocumentId, after.DocumentId, StringComparison.Ordinal))
+        {
+            // The same version cannot differ from itself; still verify it exists, but skip the dense graph load.
+            beforeDocument = afterDocument = await LoadDocument(before.DocumentId, beforeVersion, nameof(before), store, cancellationToken);
+            comparison = new DocumentComparison();
+        }
+        else
+        {
+            // Every store read opens its own driver session (the driver is a thread-safe singleton), so both sides load concurrently.
+            var beforeLoad = LoadForComparison(before.DocumentId, beforeVersion, nameof(before), store, cancellationToken);
+            var afterLoad = LoadForComparison(after.DocumentId, afterVersion, nameof(after), store, cancellationToken);
+            await Task.WhenAll(beforeLoad, afterLoad);
+            (beforeDocument, var beforeGraph) = await beforeLoad;
+            (afterDocument, var afterGraph) = await afterLoad;
+            comparison = DocumentComparer.Compare(beforeGraph, afterGraph, positionTolerance);
+        }
+        return new GqlDocumentComparison
+        {
+            Before = beforeDocument,
+            After = afterDocument,
+            HasChanges = comparison.HasChanges,
+            AddedNodes = comparison.AddedNodes,
+            RemovedNodes = comparison.RemovedNodes,
+            ChangedNodes = comparison.ChangedNodes,
+            AddedPorts = comparison.AddedPorts,
+            RemovedPorts = comparison.RemovedPorts,
+            AddedEdges = comparison.AddedEdges,
+            RemovedEdges = comparison.RemovedEdges,
+        };
+    }
+
+    static async Task<Document> LoadDocument(string documentId, Guid versionId, string label, IGraphStore store, CancellationToken cancellationToken) =>
+        await store.GetDocument(documentId, versionId, cancellationToken)
+            ?? throw GraphStoreException.NotFound($"{label} document '{documentId}' version '{versionId}' was not found.");
+
+    static async Task<(Document Document, DocumentGraphResult Graph)> LoadForComparison(
+        string documentId, Guid versionId, string label, IGraphStore store, CancellationToken cancellationToken)
+    {
+        // The graph query matches no rows for an unknown version, so it can run alongside the existence check.
+        var documentLoad = LoadDocument(documentId, versionId, label, store, cancellationToken);
+        var graphLoad = store.GetDocumentGraph(documentId, versionId, cancellationToken);
+        await Task.WhenAll(documentLoad, graphLoad);
+        return (await documentLoad, await graphLoad);
+    }
 
     public async Task<GqlDataflowPath?> Path(string documentId, string versionId, string fromNodeId, string toNodeId, [DefaultValue(8)] int maxHops, [Service] IGraphStore store, CancellationToken cancellationToken)
     {

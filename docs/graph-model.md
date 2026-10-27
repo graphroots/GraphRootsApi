@@ -48,7 +48,9 @@ Slide-sized figures (`1920×1080` SVG) for a presentation.
 
 Tool-specific data is a dictionary on the C# type (`Extensions`), flattened to Neo4j properties on write. Keys **must** be namespaced (`gh.componentGuid`, later `dyn.…`) and must not collide with a core property name (including `gh.Name`). Cypher can still filter on these keys.
 
-Grasshopper keys (see `GhExtensionKeys`): `gh.componentGuid`, `gh.scriptSource`, `gh.usingSource`, `gh.additionalSource`, `gh.scriptText`, `gh.clusterParamMap`, `gh.clusterVersionId`, `gh.clusterSourcePortId`, `gh.clusterTargetPortId`, `gh.assemblyName`.
+Grasshopper keys (see `GhExtensionKeys`): `gh.componentGuid`, `gh.scriptSource`, `gh.usingSource`, `gh.additionalSource`, `gh.scriptText`, `gh.clusterParamMap`, `gh.clusterVersionId`, `gh.clusterSourcePortId`, `gh.clusterTargetPortId`, `gh.assemblyName`, `gh.stateHash`.
+
+`gh.stateHash` is a SHA-256 of the node's GH `Object` chunk with `Name`, `NickName`, `Pivot`, `Bounds`, `Selected`, `Source` and `SourceCount` items removed at every depth (`Selected` is the canvas selection flag, so selecting a component and saving does not count as a change). It exists for version comparison: two versions of a node (same `NodeId`) with equal hashes have the same settings and internal state. Renames (node and port), moves and rewiring are compared through core properties, ports and `EDGE` instead.
 
 ## Mapping table
 
