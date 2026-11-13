@@ -4,9 +4,9 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace GraphRoots.GraphDb;
+namespace GraphRoots.GraphDb.Neo4j;
 
-public sealed partial class GraphStore
+public sealed partial class Neo4jGraphStore
 {
     public async Task<PageResult<SubgraphMatch>> MatchSubgraph(
         SubgraphPattern pattern,
@@ -25,14 +25,14 @@ public sealed partial class GraphStore
             First = page.First,
             After = page.After,
             DefaultSize = 20,
-            MaxSize = SubgraphMatcher.MaxMatchResults,
+            MaxSize = StoreLimits.MaxMatchResults,
             IncludeTotalCount = page.IncludeTotalCount,
         };
         var take = matchPage.Take();
         var compiled = SubgraphMatcher.Compile(pattern, scope, options, matchPage.After, take + 1);
 
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeout.CancelAfter(SubgraphMatcher.MatchTimeout);
+        timeout.CancelAfter(StoreLimits.MatchTimeout);
         var token = timeout.Token;
 
         try
@@ -73,7 +73,7 @@ public sealed partial class GraphStore
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
-            throw GraphStoreException.MatchTimeout($"matchSubgraph exceeded {SubgraphMatcher.MatchTimeout.TotalSeconds:0}s.");
+            throw GraphStoreException.MatchTimeout($"matchSubgraph exceeded {StoreLimits.MatchTimeout.TotalSeconds:0}s.");
         }
     }
 

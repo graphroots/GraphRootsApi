@@ -4,9 +4,9 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace GraphRoots.GraphDb;
+namespace GraphRoots.GraphDb.Neo4j;
 
-public sealed partial class GraphStore
+public sealed partial class Neo4jGraphStore
 {
     public async Task<ImportSnapshotResult> ImportSnapshot(ImportSnapshot snapshot, CancellationToken cancellationToken = default)
     {

@@ -145,25 +145,3 @@ public sealed class SubgraphMatch
 
     public IReadOnlyList<ConnectionRealization> Connections { get; init; } = [];
 }
-
-public sealed class CompiledSubgraphQuery
-{
-    public string Cypher { get; init; } = "";
-
-    public string CountCypher { get; init; } = "";
-
-    public IReadOnlyDictionary<string, object?> Parameters { get; init; } =
-        new Dictionary<string, object?>();
-
-    public SubgraphPatternMode Mode { get; init; }
-
-    public IReadOnlyList<string> NodeKeys { get; init; } = [];
-
-    public IReadOnlyList<string> PortKeys { get; init; } = [];
-
-    public IReadOnlyList<string> EdgeKeys { get; init; } = [];
-
-    public IReadOnlyList<string> ConnectionKeys { get; init; } = [];
-
-    public IReadOnlyList<string> OrderNodeKeys { get; init; } = [];
-}

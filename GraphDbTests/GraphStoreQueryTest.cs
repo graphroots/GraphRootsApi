@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using GraphRoots.GraphDb;
+using GraphRoots.GraphDb.Neo4j;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace GraphRoots.GraphDbTests;
@@ -12,7 +13,7 @@ public class GraphStoreQueryTest
     public async Task GetLibraryVersion_WithoutAssemblyVersion_MatchesAnyAssembly()
     {
         var db = new RecordingDbOperations();
-        var store = new GraphStore(db);
+        var store = new Neo4jGraphStore(db);
         await store.GetLibraryVersion(GraphOrigins.Grasshopper, "lib-1", "1.0.0", null);
         Assert.AreEqual(1, db.Queries.Count);
         StringAssert.Contains(db.Queries[0], "ORDER BY n.AssemblyVersion ASC");
@@ -24,7 +25,7 @@ public class GraphStoreQueryTest
     public async Task GetIsolatedNodes_ExcludesGroupAnnotationCluster()
     {
         var db = new RecordingDbOperations();
-        var store = new GraphStore(db);
+        var store = new Neo4jGraphStore(db);
         await store.GetIsolatedNodes("doc", Guid.Parse("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"));
         Assert.AreEqual(1, db.Queries.Count);
         StringAssert.Contains(db.Queries[0], $"'{NodeKinds.Group}'");
@@ -37,7 +38,7 @@ public class GraphStoreQueryTest
     public async Task ListDocuments_UnknownOrigin_ExcludesKnownOrigins()
     {
         var db = new RecordingDbOperations();
-        var store = new GraphStore(db);
+        var store = new Neo4jGraphStore(db);
         await store.ListDocuments(
             new DocumentFilter { Origin = GraphOrigins.UnknownFilter },
             new PageRequest { First = 1, IncludeTotalCount = false });

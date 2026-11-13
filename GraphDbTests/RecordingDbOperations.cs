@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using GraphRoots.GraphDb;
+using GraphRoots.GraphDb.Neo4j;
 
 namespace GraphRoots.GraphDbTests
 {

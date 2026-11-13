@@ -1,7 +1,7 @@
 using System;
 using Neo4j.Driver;
 
-namespace GraphRoots.GraphDb;
+namespace GraphRoots.GraphDb.Neo4j;
 
 /// <summary>
 /// Converts Neo4j temporal values to <see cref="DateTime"/> for record mapping.

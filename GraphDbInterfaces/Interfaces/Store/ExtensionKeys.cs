@@ -10,16 +10,20 @@ using System.Text.RegularExpressions;
 namespace GraphRoots.GraphDb;
 
 /// <summary>
-/// Flatten and rehydrate namespaced extension properties on Neo4j nodes and relationships.
-/// Keys must include a prefix (e.g. <c>gh.</c>) and must not collide with core property names.
-/// Cypher never interpolates keys; use <see cref="CypherDynamicProperty"/> with a bound parameter.
+/// Contract rules for namespaced extension properties (<c>gh.componentGuid</c>, later <c>dyn.…</c>):
+/// key syntax, collisions with core property names, and allowed values. Backends decide how to persist them.
 /// </summary>
-public static class DbExtensionProperties
+public static class ExtensionKeys
 {
+    /// <summary>Name of the extension dictionary property on model types.</summary>
     public const string PropertyName = "Extensions";
 
     static readonly Regex KeyPattern = new(@"^[a-z][a-z0-9]*\.[A-Za-z0-9][A-Za-z0-9._-]*$", RegexOptions.Compiled);
 
+    /// <summary>
+    /// Names no extension key (or its local name) may use, besides the model's own properties.
+    /// Includes the bookkeeping and driver fields of the Neo4j reference backend so the API behaves the same on every backend.
+    /// </summary>
     static readonly string[] ReservedNames =
     {
         "schemaVersion",
@@ -52,7 +56,7 @@ public static class DbExtensionProperties
                 $"Extension key '{key}' must match 'prefix.localName' with a lowercase namespace (e.g. gh.componentGuid).");
         }
 
-        var localName = key![(key.LastIndexOf('.') + 1)..];
+        var localName = key[(key.LastIndexOf('.') + 1)..];
         if (corePropertyNames != null &&
             (corePropertyNames.Contains(key) || corePropertyNames.Contains(localName)))
         {
@@ -60,44 +64,10 @@ public static class DbExtensionProperties
         }
     }
 
-    public static string CypherDynamicProperty(string variable, string keyParameter) =>
-        $"{variable}[${keyParameter}]";
-
-    public static void ValidateAndFlatten(
-        IDictionary<string, object?>? extensions,
-        ISet<string> corePropertyNames,
-        IDictionary<string, object> target)
-    {
-        if (extensions == null || extensions.Count == 0)
-            return;
-
-        foreach (var kvp in extensions)
-        {
-            ValidateKey(kvp.Key, corePropertyNames);
-            if (kvp.Value == null)
-                continue;
-            target[kvp.Key] = NormalizeValue(kvp.Value);
-        }
-    }
-
-    public static Dictionary<string, object?> Rehydrate(
-        IEnumerable<KeyValuePair<string, object>> properties,
-        ISet<string> corePropertyNames)
-    {
-        var extensions = new Dictionary<string, object?>();
-        foreach (var kvp in properties)
-        {
-            if (kvp.Key.IndexOf('.') < 0)
-                continue;
-            if (corePropertyNames.Contains(kvp.Key))
-                continue;
-            if (!IsValidKey(kvp.Key))
-                continue;
-            extensions[kvp.Key] = kvp.Value;
-        }
-        return extensions;
-    }
-
+    /// <summary>
+    /// Normalize an extension value: strings, booleans, numbers (as double), GUIDs (as string),
+    /// or arrays of those. JSON objects, nested arrays, and null array items are rejected.
+    /// </summary>
     public static object NormalizeValue(object value)
     {
         if (value is Guid guid)

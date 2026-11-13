@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using GraphRoots.GraphDb;
+using GraphRoots.GraphDb.Neo4j;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace GraphRoots.GraphDbTests;

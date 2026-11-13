@@ -10,10 +10,11 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="MSTest.TestAdapter" />
     <PackageReference Include="MSTest.TestFramework" />
-    <PackageReference Include="Neo4j.Driver" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\GraphApi\GraphApi.csproj" />
+    <!-- Live tests register the Neo4j backend directly; GraphApi itself only sees GraphDb.Hosting. -->
+    <ProjectReference Include="..\GraphDb.Neo4j\GraphDb.Neo4j.csproj" />
     <ProjectReference Include="..\GrasshopperLib\GrasshopperLib.csproj" />
   </ItemGroup>
   <ItemGroup>

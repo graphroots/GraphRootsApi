@@ -71,7 +71,7 @@ sealed class FakeGraphStore : IGraphStore
             (scope.VersionId == null && string.IsNullOrEmpty(scope.DocumentId) && string.IsNullOrEmpty(scope.Origin));
         if (unscoped && page.First == null)
             throw GraphStoreException.LimitRequired("Corpus-wide matchSubgraph requires first.");
-        SubgraphMatcher.Validate(pattern);
+        SubgraphPatternValidator.Validate(pattern);
         return Task.FromResult(new PageResult<SubgraphMatch>
         {
             Items = [new SubgraphMatch { Document = Sample, Nodes = [], Ports = [], Edges = [], Connections = [] }],

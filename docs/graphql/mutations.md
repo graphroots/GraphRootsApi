@@ -58,7 +58,7 @@ mutation {
 
 Records a merge commit. There is no automatic merge of `CONTAINS` / `EDGE` topology — the working copy **is** the merge result (patch it first if you need combined graphs).
 
-- Other parents must be snapshots, must not be the working copy, and must not already be ancestors.
+- Other parents must be snapshots, must not be the working copy, and must not already be ancestors (at any depth).
 - The new snapshot has `BASED_ON` to `distinct(HEAD ∪ otherParents)` (at least two).
 - Working HEAD is repointed at the merge snapshot.
 

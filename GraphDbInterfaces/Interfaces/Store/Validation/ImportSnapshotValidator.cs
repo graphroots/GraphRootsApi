@@ -22,10 +22,10 @@ public static class ImportSnapshotValidator
         var usedBy = snapshot.UsedBy ?? [];
 
         var entityCount = nodes.Count + ports.Count + edges.Count;
-        if (entityCount > GraphStore.MaxDenseGraphEntities)
+        if (entityCount > StoreLimits.MaxDenseGraphEntities)
         {
             throw GraphStoreException.ResultTooLarge(
-                $"Import snapshot has {entityCount} nodes, ports, and edges; the limit is {GraphStore.MaxDenseGraphEntities}.");
+                $"Import snapshot has {entityCount} nodes, ports, and edges; the limit is {StoreLimits.MaxDenseGraphEntities}.");
         }
 
         var roots = documents.Where(d => d.IsNested != true).ToList();
@@ -206,12 +206,12 @@ public static class ImportSnapshotValidator
     {
         if (extensions == null || extensions.Count == 0)
             return;
-        var core = DbExtensionProperties.CorePropertyNames(entityType);
+        var core = ExtensionKeys.CorePropertyNames(entityType);
         foreach (var key in extensions.Keys)
         {
             try
             {
-                DbExtensionProperties.ValidateKey(key, core);
+                ExtensionKeys.ValidateKey(key, core);
             }
             catch (GraphStoreException ex)
             {

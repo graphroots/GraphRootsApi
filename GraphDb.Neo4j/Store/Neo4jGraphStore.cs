@@ -4,15 +4,14 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace GraphRoots.GraphDb;
+namespace GraphRoots.GraphDb.Neo4j;
 
-public sealed partial class GraphStore : IGraphStore
+public sealed partial class Neo4jGraphStore : IGraphStore
 {
-    public const int MaxDenseGraphEntities = 100_000;
 
     readonly IDbOperations _db;
 
-    public GraphStore(IDbOperations dbOperations)
+    public Neo4jGraphStore(IDbOperations dbOperations)
     {
         _db = dbOperations;
     }
