@@ -12,19 +12,18 @@ public sealed partial class Neo4jGraphStore
 {
     public async Task<Document> ForkDocument(string documentId, Guid versionId, string? newDocumentId, CancellationToken cancellationToken = default)
     {
-        var source = await GetDocument(documentId, versionId, cancellationToken)
-            ?? throw GraphStoreException.NotFound($"Document '{documentId}' version '{versionId}' was not found.");
-
         var destId = string.IsNullOrWhiteSpace(newDocumentId) ? Guid.NewGuid().ToString() : newDocumentId;
         var destVersion = Guid.NewGuid();
-        IReadOnlyList<Document> parents = IsWorkingCopy(source)
-            ? await GetBasedOn(source.DocumentId, source.VersionId, cancellationToken)
-            : [source];
+        Document? source = null;
 
         await _db.ExecuteWrite(async ct =>
         {
+            source = DocumentLifecycle.RequireDocument(await GetDocument(documentId, versionId, ct), documentId, versionId);
+            var sourceHead = DocumentLifecycle.IsWorkingCopy(source)
+                ? await GetBasedOn(source.DocumentId, source.VersionId, ct)
+                : [];
             await CopyDocumentSubgraph(source.DocumentId, source.VersionId, destId, destVersion, committed: false, ct);
-            await MergeBasedOn(destId, destVersion, parents, ct);
+            await MergeBasedOn(destId, destVersion, DocumentLifecycle.ForkParents(source, sourceHead), ct);
         }, cancellationToken);
 
         return await GetDocument(destId, destVersion, cancellationToken)
@@ -33,7 +32,7 @@ public sealed partial class Neo4jGraphStore
                 DocumentId = destId,
                 VersionId = destVersion,
                 Origin = GraphOrigins.GraphRoots,
-                FileName = source.FileName,
+                FileName = source!.FileName,
                 IsNested = source.IsNested,
                 Committed = false,
             };
@@ -41,17 +40,17 @@ public sealed partial class Neo4jGraphStore
 
     public async Task<CommitDocumentResult> CommitDocument(string documentId, Guid versionId, CancellationToken cancellationToken = default)
     {
-        var working = await RequireWorkingCopy(documentId, versionId, cancellationToken);
-        var parents = await GetBasedOn(working.DocumentId, working.VersionId, cancellationToken);
         var commitVersion = Guid.NewGuid();
         await _db.ExecuteWrite(async ct =>
         {
+            var working = DocumentLifecycle.RequireWorkingCopy(await LockDocument(documentId, versionId, ct), documentId, versionId);
+            var parents = await GetBasedOn(working.DocumentId, working.VersionId, ct);
             await CopyDocumentSubgraph(working.DocumentId, working.VersionId, working.DocumentId, commitVersion, committed: true, ct);
             await MergeBasedOn(working.DocumentId, commitVersion, parents, ct);
             await RepointHead(working.DocumentId, working.VersionId, working.DocumentId, commitVersion, ct);
         }, cancellationToken);
 
-        return await LoadCommitResult(working.DocumentId, commitVersion, working.DocumentId, working.VersionId, cancellationToken);
+        return await LoadCommitResult(documentId, commitVersion, documentId, versionId, cancellationToken);
     }
 
     public async Task<CommitDocumentResult> MergeDocument(
@@ -60,47 +59,74 @@ public sealed partial class Neo4jGraphStore
         IReadOnlyList<(string DocumentId, Guid VersionId)> otherParents,
         CancellationToken cancellationToken = default)
     {
-        var working = await RequireWorkingCopy(documentId, versionId, cancellationToken);
-        if (otherParents == null || otherParents.Count == 0)
-            throw GraphStoreException.InvalidArgument("mergeDocument.otherParents must contain at least one parent.");
-
-        var head = await GetBasedOn(working.DocumentId, working.VersionId, cancellationToken);
-        var ancestors = await TraverseHistory(working.DocumentId, working.VersionId, HistoryDirection.Ancestors, 1, StoreLimits.MaxHops, cancellationToken);
-        var ancestorKeys = new HashSet<(string DocumentId, Guid VersionId)>(ancestors.Select(a => (a.DocumentId, a.VersionId)));
-        var parentMap = new Dictionary<(string DocumentId, Guid VersionId), Document>();
-        foreach (var parent in head)
-            parentMap[(parent.DocumentId, parent.VersionId)] = parent;
-
-        foreach (var key in otherParents)
-        {
-            if (string.IsNullOrWhiteSpace(key.DocumentId))
-                throw GraphStoreException.InvalidArgument("mergeDocument.otherParents.documentId is required.");
-            if (key.DocumentId == working.DocumentId && key.VersionId == working.VersionId)
-                throw GraphStoreException.InvalidArgument("mergeDocument.otherParents must not include the working copy.");
-            if (ancestorKeys.Contains(key))
-                throw GraphStoreException.InvalidArgument($"Document '{key.DocumentId}' version '{key.VersionId}' is already an ancestor of the working copy.");
-            if (parentMap.ContainsKey(key))
-                continue;
-            var parent = await GetDocument(key.DocumentId, key.VersionId, cancellationToken)
-                ?? throw GraphStoreException.NotFound($"Document '{key.DocumentId}' version '{key.VersionId}' was not found.");
-            if (IsWorkingCopy(parent))
-                throw GraphStoreException.InvalidArgument($"Document '{parent.DocumentId}' version '{parent.VersionId}' is a working copy; merge parents must be snapshots.");
-            parentMap[key] = parent;
-        }
-
-        if (parentMap.Count < 2)
-            throw GraphStoreException.InvalidArgument("mergeDocument requires at least two distinct parents (HEAD plus other parents).");
-
         var commitVersion = Guid.NewGuid();
-        var parents = parentMap.Values.ToList();
         await _db.ExecuteWrite(async ct =>
         {
+            var working = DocumentLifecycle.RequireWorkingCopy(await LockDocument(documentId, versionId, ct), documentId, versionId);
+            var requested = (otherParents ?? []).Distinct().ToList();
+            var head = await GetBasedOn(working.DocumentId, working.VersionId, ct);
+            var ancestors = await AncestorsAmong(working, requested, ct);
+            var found = await GetDocuments(requested, ct);
+            var resolved = new Dictionary<(string DocumentId, Guid VersionId), Document?>();
+            for (var i = 0; i < requested.Count; i++)
+                resolved[requested[i]] = found[i];
+
+            var parents = DocumentLifecycle.MergeParents(working, head, otherParents, resolved, ancestors);
             await CopyDocumentSubgraph(working.DocumentId, working.VersionId, working.DocumentId, commitVersion, committed: true, ct);
             await MergeBasedOn(working.DocumentId, commitVersion, parents, ct);
             await RepointHead(working.DocumentId, working.VersionId, working.DocumentId, commitVersion, ct);
         }, cancellationToken);
 
-        return await LoadCommitResult(working.DocumentId, commitVersion, working.DocumentId, working.VersionId, cancellationToken);
+        return await LoadCommitResult(documentId, commitVersion, documentId, versionId, cancellationToken);
+    }
+
+    /// <summary>
+    /// Inside a write transaction: take the write lock on a document node (held until commit) and return its
+    /// current state, so concurrent commits or merges on one working copy serialize and see each other's HEAD.
+    /// </summary>
+    async Task<Document?> LockDocument(string documentId, Guid versionId, CancellationToken cancellationToken)
+    {
+        var rows = await _db.RunQuery<DbOperations.CypherItemRecord<Document>>(@"
+MATCH (n:Document {DocumentId: $documentId, VersionId: $versionId})
+SET n.updatedAt = datetime()
+RETURN n AS Item",
+            new { documentId, versionId = versionId.ToString() },
+            cancellationToken);
+        return rows.FirstOrDefault()?.Item;
+    }
+
+    /// <summary>
+    /// The keys among <paramref name="candidates"/> that <paramref name="working"/> reaches over <c>BASED_ON</c>
+    /// at any depth. Uses a breadth-first shortest path per candidate, so merge-heavy histories do not
+    /// enumerate every path.
+    /// </summary>
+    async Task<IReadOnlySet<(string DocumentId, Guid VersionId)>> AncestorsAmong(
+        Document working,
+        IReadOnlyList<(string DocumentId, Guid VersionId)> candidates,
+        CancellationToken cancellationToken)
+    {
+        if (candidates.Count == 0)
+            return new HashSet<(string DocumentId, Guid VersionId)>();
+        var rows = await _db.RunQuery<DbOperations.CypherItemRecord<Document>>(@"
+MATCH (w:Document {DocumentId: $documentId, VersionId: $versionId})
+UNWIND $candidates AS c
+MATCH (a:Document {DocumentId: c.documentId, VersionId: c.versionId})
+WHERE a <> w
+MATCH p = shortestPath((w)-[:BASED_ON*1..]->(a))
+RETURN DISTINCT a AS Item",
+            new
+            {
+                documentId = working.DocumentId,
+                versionId = working.VersionId.ToString(),
+                candidates = candidates
+                    .Select(c => new Dictionary<string, object> { ["documentId"] = c.DocumentId, ["versionId"] = c.VersionId.ToString() })
+                    .ToList(),
+            },
+            cancellationToken);
+        return rows
+            .Where(r => r.Item != null)
+            .Select(r => (r.Item!.DocumentId, r.Item.VersionId))
+            .ToHashSet();
     }
 
     public async Task<Document> CreateDocument(string? documentId, string? fileName, CancellationToken cancellationToken = default)
@@ -128,9 +154,10 @@ public sealed partial class Neo4jGraphStore
     public async Task<GraphPatchResult> ApplyPatch(GraphPatch patch, CancellationToken cancellationToken = default)
     {
         GraphPatchValidator.Validate(patch);
-        var document = await GetDocument(patch.DocumentId, patch.VersionId, cancellationToken)
-            ?? throw GraphStoreException.NotFound($"Document '{patch.DocumentId}' version '{patch.VersionId}' was not found.");
-        EnsureWritable(document);
+        var document = DocumentLifecycle.RequireWorkingCopy(
+            await GetDocument(patch.DocumentId, patch.VersionId, cancellationToken),
+            patch.DocumentId,
+            patch.VersionId);
 
         var createdNodes = new List<string>();
         var deletedNodes = new List<string>();
@@ -566,14 +593,6 @@ RETURN w",
             cancellationToken);
     }
 
-    async Task<Document> RequireWorkingCopy(string documentId, Guid versionId, CancellationToken cancellationToken)
-    {
-        var document = await GetDocument(documentId, versionId, cancellationToken)
-            ?? throw GraphStoreException.NotFound($"Document '{documentId}' version '{versionId}' was not found.");
-        EnsureWritable(document);
-        return document;
-    }
-
     async Task<CommitDocumentResult> LoadCommitResult(
         string commitDocumentId,
         Guid commitVersionId,
@@ -590,24 +609,6 @@ RETURN w",
 
     Task Exec(string query, object parameters, CancellationToken cancellationToken) =>
         _db.QueryRecords(query, parameters, _ => Task.CompletedTask, cancellationToken);
-
-    static void EnsureWritable(Document document)
-    {
-        if (document.Committed)
-        {
-            throw GraphStoreException.ImmutableDocument(
-                $"Document '{document.DocumentId}' version '{document.VersionId}' is committed; fork it first.");
-        }
-        if (!string.Equals(document.Origin, GraphOrigins.GraphRoots, StringComparison.OrdinalIgnoreCase))
-        {
-            throw GraphStoreException.ImmutableDocument(
-                $"Document '{document.DocumentId}' origin '{document.Origin}' is immutable; fork it first.");
-        }
-    }
-
-    static bool IsWorkingCopy(Document document) =>
-        !document.Committed &&
-        string.Equals(document.Origin, GraphOrigins.GraphRoots, StringComparison.OrdinalIgnoreCase);
 
     static Dictionary<string, object?> ToDictionary(object parameters)
     {

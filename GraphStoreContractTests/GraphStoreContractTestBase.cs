@@ -694,6 +694,44 @@ public abstract class GraphStoreContractTestBase
     }
 
     [TestMethod]
+    public async Task MergeDocument_RejectsAncestorDeeperThanMaxHops()
+    {
+        var working = await Store.CreateDocument("deep-history", "deep-history");
+        CommitDocumentResult? oldest = null;
+        for (var i = 0; i < StoreLimits.MaxHops + 2; i++)
+        {
+            var commit = await Store.CommitDocument(working.DocumentId, working.VersionId);
+            oldest ??= commit;
+        }
+
+        // The first commit is MaxHops + 2 BASED_ON hops behind the working copy; the ancestor check must still see it.
+        var ex = await Assert.ThrowsExactlyAsync<GraphStoreException>(() =>
+            Store.MergeDocument(working.DocumentId, working.VersionId, [(oldest!.Document.DocumentId, oldest.Document.VersionId)]));
+        Assert.AreEqual(GraphStoreException.Codes.InvalidArgument, ex.Code);
+        StringAssert.Contains(ex.Message, "already an ancestor");
+    }
+
+    [TestMethod]
+    public async Task CommitAndMerge_RejectSnapshots()
+    {
+        var version = Guid.NewGuid();
+        await ImportGrasshopper([GhDocument("snap", version)]);
+
+        var commit = await Assert.ThrowsExactlyAsync<GraphStoreException>(() => Store.CommitDocument("snap", version));
+        Assert.AreEqual(GraphStoreException.Codes.ImmutableDocument, commit.Code);
+
+        var merge = await Assert.ThrowsExactlyAsync<GraphStoreException>(() => Store.MergeDocument("snap", version, [("other", Guid.NewGuid())]));
+        Assert.AreEqual(GraphStoreException.Codes.ImmutableDocument, merge.Code);
+
+        var missing = await Assert.ThrowsExactlyAsync<GraphStoreException>(() => Store.CommitDocument("missing", Guid.NewGuid()));
+        Assert.AreEqual(GraphStoreException.Codes.NotFound, missing.Code);
+
+        var snapshot = await Store.GetDocument("snap", version);
+        Assert.IsNotNull(snapshot);
+        Assert.AreEqual(0, (await Store.GetDerivedDocuments("snap", version)).Count);
+    }
+
+    [TestMethod]
     public async Task ImportSnapshot_MergesGraphAndIsIdempotent()
     {
         var version = Guid.Parse("11111111-2222-3333-4444-555555555555");
