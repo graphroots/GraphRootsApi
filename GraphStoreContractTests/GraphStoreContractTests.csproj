@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>GraphRoots.GraphStoreContractTests</RootNamespace>
+    <AssemblyName>GraphStoreContractTests</AssemblyName>
+    <!-- Library of abstract test classes; each storage backend's test project derives a [TestClass] and runs them. -->
+    <IsTestProject>false</IsTestProject>
+    <Description>Backend-agnostic IGraphStore contract tests</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="MSTest.TestFramework" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\GraphDbInterfaces\GraphDbInterfaces.csproj" />
+  </ItemGroup>
+</Project>

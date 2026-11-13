@@ -10,39 +10,34 @@ using HotChocolate;
 using HotChocolate.Execution;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Neo4j.Driver;
 
 namespace GraphRoots.GraphApiTests;
 
-[TestClass]
-public class GraphQLLiveExecutionTest
+/// <summary>
+/// GraphQL execution against a real storage backend. Each backend derives a <c>[TestClass]</c>,
+/// initializes its store in <c>[ClassInitialize]</c>, and builds <see cref="Executor"/> with
+/// <see cref="CreateExecutor"/>. Seeding goes through GraphQL or the public <see cref="IGraphStore"/> contract.
+/// </summary>
+public abstract class GraphQLStoreTestBase
 {
-    static IDriver? Driver;
-    static IGraphStore? Store;
-    static IDbOperations? Db;
-    static ServiceProvider? Services;
-    static IRequestExecutor? Executor;
+    protected abstract IGraphStore Store { get; }
 
-    [ClassInitialize]
-    public static async Task ClassInitialize(TestContext _)
-    {
-        var settings = LiveNeo4j.Require();
-        Driver = GraphDatabase.Driver(settings.Uri, AuthTokens.Basic(settings.User, settings.Password));
-        Db = new DbOperations(Driver, settings.Database);
-        Store = new GraphStore(Db);
-        await Db.EnsureSchema();
+    protected abstract IGraphStoreAdmin Admin { get; }
 
-        var services = new ServiceCollection();
-        services.AddSingleton<IGraphStore>(Store!);
-        services.AddGraphRootsGraphQL();
-        Services = services.BuildServiceProvider();
-        Executor = await Services.GetRequiredService<IRequestExecutorResolver>().GetRequestExecutorAsync();
-    }
+    protected abstract IRequestExecutor Executor { get; }
 
     [TestInitialize]
-    public async Task TestInitialize()
+    public Task PurgeBeforeEachTest() => Admin.Purge();
+
+    /// <summary>The production GraphQL schema over <paramref name="store"/>.</summary>
+    public static async Task<(ServiceProvider Services, IRequestExecutor Executor)> CreateExecutor(IGraphStore store)
     {
-        await Db!.PurgeDatabase();
+        var services = new ServiceCollection();
+        services.AddSingleton(store);
+        services.AddGraphRootsGraphQL();
+        var provider = services.BuildServiceProvider();
+        var executor = await provider.GetRequiredService<IRequestExecutorResolver>().GetRequestExecutorAsync();
+        return (provider, executor);
     }
 
     [TestMethod]
@@ -112,27 +107,23 @@ public class GraphQLLiveExecutionTest
     [TestMethod]
     public async Task MatchSubgraph_IncludeNested_ParentVersusChild()
     {
-        var parent = await CreateBlank("gql-nest-p");
-        await Apply($@"
-            mutation {{
-              applyGraphPatch(input: {{
-                documentId: ""{parent.DocumentId}""
-                versionId: ""{parent.VersionId}""
-                createNodes: [{{ nodeId: ""parent-n"", kind: OPERATOR }}]
-              }}) {{ createdNodeIds }}
-            }}");
-        var child = await CreateBlank("gql-nest-c");
-        await Apply($@"
-            mutation {{
-              applyGraphPatch(input: {{
-                documentId: ""{child.DocumentId}""
-                versionId: ""{child.VersionId}""
-                createNodes: [{{ nodeId: ""child-n"", kind: OPERATOR }}]
-              }}) {{ createdNodeIds }}
-            }}");
-        var parentDoc = await Store!.GetDocument(parent.DocumentId, Guid.Parse(parent.VersionId));
-        var childDoc = await Store.GetDocument(child.DocumentId, Guid.Parse(child.VersionId));
-        await Db!.MergeRelationship(parentDoc!, childDoc!, new Nests());
+        var parent = (DocumentId: "gql-nest-p", VersionId: Guid.NewGuid());
+        var child = (DocumentId: "gql-nest-c", VersionId: Guid.NewGuid());
+        await Store.ImportSnapshot(new ImportSnapshot
+        {
+            Documents =
+            [
+                new ImportDocument { DocumentId = parent.DocumentId, VersionId = parent.VersionId, Origin = GraphOrigins.Grasshopper },
+                new ImportDocument { DocumentId = child.DocumentId, VersionId = child.VersionId, Origin = GraphOrigins.Grasshopper, IsNested = true },
+            ],
+            Nodes =
+            [
+                new ImportNode { DocumentId = parent.DocumentId, VersionId = parent.VersionId, NodeId = "parent-n", Origin = GraphOrigins.Grasshopper, TypeId = "op", Kind = NodeKinds.Operator },
+                new ImportNode { DocumentId = child.DocumentId, VersionId = child.VersionId, NodeId = "child-n", Origin = GraphOrigins.Grasshopper, TypeId = "op", Kind = NodeKinds.Operator },
+            ],
+            NodeTypes = [new ImportNodeType { Origin = GraphOrigins.Grasshopper, TypeId = "op" }],
+            Nests = [new ImportNest { ParentDocumentId = parent.DocumentId, ParentVersionId = parent.VersionId, ChildDocumentId = child.DocumentId, ChildVersionId = child.VersionId }],
+        });
 
         var parentOnly = await Execute($@"
             {{
@@ -274,13 +265,21 @@ public class GraphQLLiveExecutionTest
     [TestMethod]
     public async Task LibraryVersion_UnknownAssembly_ExactLookup()
     {
-        await Db!.MergeNode(new LibraryVersion
+        await Store.ImportSnapshot(new ImportSnapshot
         {
-            Origin = GraphOrigins.Grasshopper,
-            LibraryId = "gh",
-            Version = "unknown",
-            AssemblyVersion = "unknown",
-            Name = "Grasshopper",
+            Documents = [new ImportDocument { DocumentId = "lib-doc", VersionId = Guid.NewGuid(), Origin = GraphOrigins.Grasshopper }],
+            Libraries = [new ImportLibrary { Origin = GraphOrigins.Grasshopper, LibraryId = "gh", Name = "Grasshopper" }],
+            LibraryVersions =
+            [
+                new ImportLibraryVersion
+                {
+                    Origin = GraphOrigins.Grasshopper,
+                    LibraryId = "gh",
+                    Version = "unknown",
+                    AssemblyVersion = "unknown",
+                    Name = "Grasshopper",
+                },
+            ],
         });
 
         var json = await Execute("""
@@ -320,7 +319,7 @@ public class GraphQLLiveExecutionTest
                 """)
             .SetVariableValues(new Dictionary<string, object?> { ["input"] = input })
             .Build();
-        var json = (await Executor!.ExecuteAsync(request)).ToJson();
+        var json = (await Executor.ExecuteAsync(request)).ToJson();
         Assert.IsFalse(json.Contains("\"errors\"", StringComparison.Ordinal), json);
         Assert.AreEqual(snapshot.Nodes.Count, JsonInt(json, "data", "importSnapshot", "nodeCount"));
 
@@ -438,9 +437,9 @@ public class GraphQLLiveExecutionTest
         return json;
     }
 
-    static async Task<string> Execute(string query)
+    async Task<string> Execute(string query)
     {
-        var result = await Executor!.ExecuteAsync(query);
+        var result = await Executor.ExecuteAsync(query);
         return result.ToJson();
     }
 

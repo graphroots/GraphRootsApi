@@ -1,39 +1,73 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using GraphRoots.GraphDb;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Neo4j.Driver;
 
-namespace GraphRoots.GraphDbTests;
+namespace GraphRoots.GraphStoreContractTests;
 
-[TestClass]
-public class GraphStoreTest
+/// <summary>
+/// Behaviour every <see cref="IGraphStore"/> backend must show. A backend's test project derives a
+/// <c>[TestClass]</c>, creates the store in <c>[ClassInitialize]</c> (calling <see cref="IGraphStoreAdmin.Initialize"/>),
+/// and returns it from <see cref="Store"/> / <see cref="Admin"/>. Data is seeded only through the public
+/// store contract (mostly <see cref="IGraphStore.ImportSnapshot"/>), never through backend internals.
+/// </summary>
+public abstract class GraphStoreContractTestBase
 {
-    static IDriver? Driver;
-    static IGraphStore? Store;
-    static IDbOperations? Db;
+    protected abstract IGraphStore Store { get; }
 
-    [ClassInitialize]
-    public static async Task ClassInitialize(TestContext _)
-    {
-        var settings = LiveNeo4j.Require();
-        Driver = GraphDatabase.Driver(settings.Uri, AuthTokens.Basic(settings.User, settings.Password));
-        Db = new DbOperations(Driver, settings.Database);
-        Store = new GraphStore(Db);
-        await Db.EnsureSchema();
-    }
+    protected abstract IGraphStoreAdmin Admin { get; }
 
     [TestInitialize]
-    public async Task TestInitialize()
+    public Task PurgeBeforeEachTest() => Admin.Purge();
+
+    protected static ImportDocument GhDocument(string documentId, Guid versionId, bool? isNested = null, DateTime? createdUtc = null) => new()
     {
-        await Db!.PurgeDatabase();
+        DocumentId = documentId,
+        VersionId = versionId,
+        Origin = GraphOrigins.Grasshopper,
+        FileName = documentId,
+        IsNested = isNested,
+        FileCreationTimeUtc = createdUtc,
+    };
+
+    protected static ImportNode GhNode(string documentId, Guid versionId, string nodeId, string? kind, string typeId = "gh-type", string? name = null, float? x = null) => new()
+    {
+        DocumentId = documentId,
+        VersionId = versionId,
+        NodeId = nodeId,
+        Origin = GraphOrigins.Grasshopper,
+        TypeId = typeId,
+        Kind = kind,
+        Name = name,
+        X = x,
+    };
+
+    /// <summary>Import Grasshopper documents and nodes, adding a catalog <see cref="ImportNodeType"/> per distinct type id.</summary>
+    protected Task<ImportSnapshotResult> ImportGrasshopper(
+        IReadOnlyList<ImportDocument> documents,
+        IReadOnlyList<ImportNode>? nodes = null,
+        IReadOnlyList<ImportNest>? nests = null)
+    {
+        nodes ??= [];
+        return Store.ImportSnapshot(new ImportSnapshot
+        {
+            Documents = documents,
+            Nodes = nodes,
+            Nests = nests ?? [],
+            NodeTypes = nodes
+                .Select(n => n.TypeId!)
+                .Distinct(StringComparer.Ordinal)
+                .Select(t => new ImportNodeType { Origin = GraphOrigins.Grasshopper, TypeId = t, Name = t })
+                .ToList(),
+        });
     }
 
     [TestMethod]
     public async Task CreatePatchForkAndMatch()
     {
-        var created = await Store!.CreateDocument("doc-a", "blank");
+        var created = await Store.CreateDocument("doc-a", "blank");
         Assert.AreEqual(GraphOrigins.GraphRoots, created.Origin);
 
         await Store.ApplyPatch(new GraphPatch
@@ -80,27 +114,10 @@ public class GraphStoreTest
         Assert.IsTrue(matches.Items[0].Connections[0].Ports.Count >= 2);
         Assert.AreEqual(1, matches.Items[0].Connections[0].Edges.Count);
 
-        var imported = new Document
-        {
-            DocumentId = "imported",
-            VersionId = Guid.NewGuid(),
-            Origin = GraphOrigins.Grasshopper,
-        };
-        await Db!.CreateNode(imported);
-        var importedNode = new Node
-        {
-            VersionId = imported.VersionId,
-            NodeId = "gh-node",
-            Origin = GraphOrigins.Grasshopper,
-            TypeId = "gh-type",
-            Kind = NodeKinds.Operator,
-            Name = "Sphere",
-        };
-        await Db.CreateNode(importedNode);
-        await Db.MergeRelationship(imported, importedNode, new Contains());
-        var nodeType = new NodeType { Origin = GraphOrigins.Grasshopper, TypeId = "gh-type", Name = "Sphere" };
-        await Db.MergeNode(nodeType);
-        await Db.MergeRelationship(nodeType, importedNode, new HasInstance());
+        var importedVersion = Guid.NewGuid();
+        var imported = (await ImportGrasshopper(
+            [GhDocument("imported", importedVersion)],
+            [GhNode("imported", importedVersion, "gh-node", NodeKinds.Operator, name: "Sphere")])).Document;
 
         var fork = await Store.ForkDocument(imported.DocumentId, imported.VersionId, "working");
         Assert.AreEqual(GraphOrigins.GraphRoots, fork.Origin);
@@ -129,7 +146,7 @@ public class GraphStoreTest
     [TestMethod]
     public async Task CascadeDeleteRemovesPortsAndEdges()
     {
-        var created = await Store!.CreateDocument("doc-del", "blank");
+        var created = await Store.CreateDocument("doc-del", "blank");
         await Store.ApplyPatch(new GraphPatch
         {
             DocumentId = created.DocumentId,
@@ -166,7 +183,7 @@ public class GraphStoreTest
     [TestMethod]
     public async Task PatchRequiresDocumentIdAndClearsNullableFields()
     {
-        var created = await Store!.CreateDocument("doc-opt", "blank");
+        var created = await Store.CreateDocument("doc-opt", "blank");
         await Store.ApplyPatch(new GraphPatch
         {
             DocumentId = created.DocumentId,
@@ -194,7 +211,7 @@ public class GraphStoreTest
     [TestMethod]
     public async Task MatchPagesAreDeterministic()
     {
-        var created = await Store!.CreateDocument("doc-page", "blank");
+        var created = await Store.CreateDocument("doc-page", "blank");
         await Store.ApplyPatch(new GraphPatch
         {
             DocumentId = created.DocumentId,
@@ -229,31 +246,15 @@ public class GraphStoreTest
     [TestMethod]
     public async Task ListDocuments_PagesPastNullCreatedAt()
     {
-        await Db!.CreateNode(new Document
-        {
-            DocumentId = "null-a",
-            VersionId = Guid.Parse("11111111-1111-1111-1111-111111111111"),
-            Origin = GraphOrigins.GraphRoots,
-            FileName = "null-a",
-        });
-        await Db.CreateNode(new Document
-        {
-            DocumentId = "null-b",
-            VersionId = Guid.Parse("22222222-2222-2222-2222-222222222222"),
-            Origin = GraphOrigins.GraphRoots,
-            FileName = "null-b",
-        });
-        await Db.CreateNode(new Document
-        {
-            DocumentId = "dated",
-            VersionId = Guid.Parse("33333333-3333-3333-3333-333333333333"),
-            Origin = GraphOrigins.GraphRoots,
-            FileName = "dated",
-            FileCreationTimeUtc = new DateTime(2024, 1, 2, 0, 0, 0, DateTimeKind.Utc),
-        });
+        await ImportGrasshopper([GhDocument("null-a", Guid.Parse("11111111-1111-1111-1111-111111111111"))]);
+        await ImportGrasshopper([GhDocument("null-b", Guid.Parse("22222222-2222-2222-2222-222222222222"))]);
+        await ImportGrasshopper([GhDocument(
+            "dated",
+            Guid.Parse("33333333-3333-3333-3333-333333333333"),
+            createdUtc: new DateTime(2024, 1, 2, 0, 0, 0, DateTimeKind.Utc))]);
 
         var sort = new SortSpec { Field = "createdAt", Direction = StoreSortDirection.Desc };
-        var page1 = await Store!.ListDocuments(null, new PageRequest { First = 2, Sort = sort, IncludeTotalCount = true });
+        var page1 = await Store.ListDocuments(null, new PageRequest { First = 2, Sort = sort, IncludeTotalCount = true });
         Assert.AreEqual(3, page1.TotalCount);
         Assert.AreEqual(2, page1.Items.Count);
         Assert.IsTrue(page1.HasNextPage);
@@ -270,14 +271,18 @@ public class GraphStoreTest
     public async Task ListNodes_PagesPastNullX()
     {
         var version = Guid.Parse("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
-        await Db!.CreateNode(new Node { VersionId = version, NodeId = "g1", Name = "Group", Kind = NodeKinds.Group });
-        await Db.CreateNode(new Node { VersionId = version, NodeId = "g2", Name = "Group", Kind = NodeKinds.Group });
-        await Db.CreateNode(new Node { VersionId = version, NodeId = "p1", Name = "Point", Kind = NodeKinds.Parameter, X = 10f });
-        await Db.CreateNode(new Node { VersionId = version, NodeId = "p2", Name = "Point", Kind = NodeKinds.Parameter, X = 20f });
+        await ImportGrasshopper(
+            [GhDocument("null-x", version)],
+            [
+                GhNode("null-x", version, "g1", NodeKinds.Group, "group", "Group"),
+                GhNode("null-x", version, "g2", NodeKinds.Group, "group", "Group"),
+                GhNode("null-x", version, "p1", NodeKinds.Parameter, "point", "Point", x: 10f),
+                GhNode("null-x", version, "p2", NodeKinds.Parameter, "point", "Point", x: 20f),
+            ]);
 
         var sort = new SortSpec { Field = "x", Direction = StoreSortDirection.Desc };
         var filter = new NodeFilter { VersionId = version };
-        var page1 = await Store!.ListNodes(filter, new PageRequest { First = 2, Sort = sort, IncludeTotalCount = true });
+        var page1 = await Store.ListNodes(filter, new PageRequest { First = 2, Sort = sort, IncludeTotalCount = true });
         Assert.AreEqual(4, page1.TotalCount);
         Assert.IsTrue(page1.HasNextPage);
         Assert.IsTrue(page1.Items.All(n => n.X == null));
@@ -289,30 +294,16 @@ public class GraphStoreTest
     }
 
     [TestMethod]
-    public async Task ListDocuments_IsNestedFalseIncludesNull()
+    public async Task ListDocuments_FiltersByIsNested()
     {
-        await Db!.CreateNode(new Document
-        {
-            DocumentId = "nested",
-            VersionId = Guid.Parse("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"),
-            Origin = GraphOrigins.Grasshopper,
-            IsNested = true,
-        });
-        await Db.CreateNode(new Document
-        {
-            DocumentId = "unset",
-            VersionId = Guid.Parse("bbbbbbbb-cccc-dddd-eeee-ffffffffffff"),
-            Origin = GraphOrigins.Grasshopper,
-        });
-        await Db.CreateNode(new Document
-        {
-            DocumentId = "top",
-            VersionId = Guid.Parse("cccccccc-dddd-eeee-ffff-000000000000"),
-            Origin = GraphOrigins.Grasshopper,
-            IsNested = false,
-        });
+        var root = Guid.Parse("cccccccc-dddd-eeee-ffff-000000000000");
+        var cluster = Guid.Parse("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+        await ImportGrasshopper(
+            [GhDocument("top", root, isNested: false), GhDocument("nested", cluster, isNested: true)],
+            nests: [new ImportNest { ParentDocumentId = "top", ParentVersionId = root, ChildDocumentId = "nested", ChildVersionId = cluster }]);
+        await ImportGrasshopper([GhDocument("unset", Guid.Parse("bbbbbbbb-cccc-dddd-eeee-ffffffffffff"))]);
 
-        var nested = await Store!.ListDocuments(new DocumentFilter { IsNested = true }, new PageRequest { First = 10, IncludeTotalCount = true });
+        var nested = await Store.ListDocuments(new DocumentFilter { IsNested = true }, new PageRequest { First = 10, IncludeTotalCount = true });
         Assert.AreEqual(1, nested.TotalCount);
         Assert.AreEqual("nested", nested.Items[0].DocumentId);
 
@@ -324,7 +315,7 @@ public class GraphStoreTest
     [TestMethod]
     public async Task GetIsolatedNodes_ExcludesGroupsAndAnnotations()
     {
-        var created = await Store!.CreateDocument("iso", "iso");
+        var created = await Store.CreateDocument("iso", "iso");
         await Store.ApplyPatch(new GraphPatch
         {
             DocumentId = created.DocumentId,
@@ -355,7 +346,7 @@ public class GraphStoreTest
     [TestMethod]
     public async Task MatchSubgraph_TwoUnconstrainedNodes_DefaultInjective()
     {
-        var created = await Store!.CreateDocument("match-two", "match-two");
+        var created = await Store.CreateDocument("match-two", "match-two");
         await Store.ApplyPatch(new GraphPatch
         {
             DocumentId = created.DocumentId,
@@ -383,7 +374,7 @@ public class GraphStoreTest
     [TestMethod]
     public async Task MatchSubgraph_ConnectionDirections_DefaultInjective()
     {
-        var created = await Store!.CreateDocument("match-dir", "match-dir");
+        var created = await Store.CreateDocument("match-dir", "match-dir");
         await Store.ApplyPatch(new GraphPatch
         {
             DocumentId = created.DocumentId,
@@ -430,21 +421,15 @@ public class GraphStoreTest
     [TestMethod]
     public async Task MatchSubgraph_IncludeNested_ParentVersusChild()
     {
-        var parent = await Store!.CreateDocument("nest-parent", "nest-parent");
-        await Store.ApplyPatch(new GraphPatch
-        {
-            DocumentId = parent.DocumentId,
-            VersionId = parent.VersionId,
-            CreateNodes = [new CreateNodeOp { NodeId = "parent-n", Kind = NodeKinds.Operator }],
-        });
-        var child = await Store.CreateDocument("nest-child", "nest-child");
-        await Store.ApplyPatch(new GraphPatch
-        {
-            DocumentId = child.DocumentId,
-            VersionId = child.VersionId,
-            CreateNodes = [new CreateNodeOp { NodeId = "child-n", Kind = NodeKinds.Operator }],
-        });
-        await Db!.MergeRelationship(parent, child, new Nests());
+        var parent = GhDocument("nest-parent", Guid.NewGuid());
+        var child = GhDocument("nest-child", Guid.NewGuid(), isNested: true);
+        await ImportGrasshopper(
+            [parent, child],
+            [
+                GhNode(parent.DocumentId, parent.VersionId, "parent-n", NodeKinds.Operator),
+                GhNode(child.DocumentId, child.VersionId, "child-n", NodeKinds.Operator),
+            ],
+            [new ImportNest { ParentDocumentId = parent.DocumentId, ParentVersionId = parent.VersionId, ChildDocumentId = child.DocumentId, ChildVersionId = child.VersionId }]);
 
         var pattern = new SubgraphPattern { Nodes = [new PatternNode { Key = "n", Kind = NodeKinds.Operator }] };
         var scoped = new MatchScope { DocumentId = parent.DocumentId, VersionId = parent.VersionId };
@@ -468,7 +453,7 @@ public class GraphStoreTest
     [TestMethod]
     public async Task MatchSubgraph_InducedAndInjective_RejectsExtraEdge()
     {
-        var created = await Store!.CreateDocument("induced", "induced");
+        var created = await Store.CreateDocument("induced", "induced");
         await Store.ApplyPatch(new GraphPatch
         {
             DocumentId = created.DocumentId,
@@ -513,7 +498,7 @@ public class GraphStoreTest
     [TestMethod]
     public async Task AttachNodeType_DoesNotOverwriteCatalogName()
     {
-        var created = await Store!.CreateDocument("catalog-name", "catalog-name");
+        var created = await Store.CreateDocument("catalog-name", "catalog-name");
         await Store.ApplyPatch(new GraphPatch
         {
             DocumentId = created.DocumentId,
@@ -537,7 +522,7 @@ public class GraphStoreTest
     [TestMethod]
     public async Task GetIsolatedNodes_IncludesNullKindPortlessNode()
     {
-        var created = await Store!.CreateDocument("iso-null", "iso-null");
+        var created = await Store.CreateDocument("iso-null", "iso-null");
         await Store.ApplyPatch(new GraphPatch
         {
             DocumentId = created.DocumentId,
@@ -556,7 +541,7 @@ public class GraphStoreTest
     [TestMethod]
     public async Task ApplyPatch_NilVersionId_NotFound()
     {
-        var created = await Store!.CreateDocument("nil-ver", "nil-ver");
+        var created = await Store.CreateDocument("nil-ver", "nil-ver");
         var ex = await Assert.ThrowsExactlyAsync<GraphStoreException>(() => Store.ApplyPatch(new GraphPatch
         {
             DocumentId = created.DocumentId,
@@ -569,7 +554,7 @@ public class GraphStoreTest
     [TestMethod]
     public async Task AddToGroups_RequiresGroupKind()
     {
-        var created = await Store!.CreateDocument("group-kind", "group-kind");
+        var created = await Store.CreateDocument("group-kind", "group-kind");
         await Store.ApplyPatch(new GraphPatch
         {
             DocumentId = created.DocumentId,
@@ -593,7 +578,7 @@ public class GraphStoreTest
     [TestMethod]
     public async Task CreateEdge_RejectsSelfLoop()
     {
-        var created = await Store!.CreateDocument("self-loop", "self-loop");
+        var created = await Store.CreateDocument("self-loop", "self-loop");
         await Store.ApplyPatch(new GraphPatch
         {
             DocumentId = created.DocumentId,
@@ -614,18 +599,12 @@ public class GraphStoreTest
     [TestMethod]
     public async Task VersionGraph_ForkCommitMergeAndHistory()
     {
-        var imported = new Document
-        {
-            DocumentId = "hist-a",
-            VersionId = Guid.NewGuid(),
-            Origin = GraphOrigins.Grasshopper,
-        };
-        await Db!.CreateNode(imported);
-        var importedNode = new Node { VersionId = imported.VersionId, NodeId = "n1", Kind = NodeKinds.Operator };
-        await Db.CreateNode(importedNode);
-        await Db.MergeRelationship(imported, importedNode, new Contains());
+        var importedVersion = Guid.NewGuid();
+        var imported = (await ImportGrasshopper(
+            [GhDocument("hist-a", importedVersion)],
+            [GhNode("hist-a", importedVersion, "n1", NodeKinds.Operator)])).Document;
 
-        var working = await Store!.ForkDocument(imported.DocumentId, imported.VersionId, "hist-w");
+        var working = await Store.ForkDocument(imported.DocumentId, imported.VersionId, "hist-w");
         Assert.IsFalse(working.Committed);
         var based = await Store.GetBasedOn(working.DocumentId, working.VersionId);
         Assert.AreEqual(1, based.Count);
@@ -762,7 +741,7 @@ public class GraphStoreTest
             ],
         };
 
-        var first = await Store!.ImportSnapshot(snapshot);
+        var first = await Store.ImportSnapshot(snapshot);
         Assert.AreEqual("gh-doc", first.Document.DocumentId);
         Assert.AreEqual(1, first.NodeCount);
         Assert.AreEqual(GraphOrigins.Grasshopper, first.Document.Origin);

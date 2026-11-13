@@ -1,5 +1,8 @@
 using System;
+using System.Threading.Tasks;
+using GraphRoots.GraphDb;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Neo4j.Driver;
 
 namespace GraphRoots.GraphDbTests;
 
@@ -30,4 +33,32 @@ static class LiveNeo4j
                 ?? "",
             database);
     }
+
+    /// <summary>
+    /// Open the isolated test database and ensure its schema. Inconclusive when the live settings are missing.
+    /// </summary>
+    public static async Task<Neo4jTestBackend> Start()
+    {
+        var settings = Require();
+        var driver = GraphDatabase.Driver(settings.Uri, AuthTokens.Basic(settings.User, settings.Password));
+        var db = new DbOperations(driver, settings.Database);
+        var backend = new Neo4jTestBackend(
+            driver,
+            db,
+            new GraphStore(db),
+            new Neo4jGraphStoreAdmin(db, $"{settings.Uri} database {settings.Database}"));
+        await backend.Admin.Initialize();
+        return backend;
+    }
+}
+
+sealed class Neo4jTestBackend(IDriver driver, IDbOperations db, IGraphStore store, IGraphStoreAdmin admin) : IAsyncDisposable
+{
+    public IDbOperations Db { get; } = db;
+
+    public IGraphStore Store { get; } = store;
+
+    public IGraphStoreAdmin Admin { get; } = admin;
+
+    public ValueTask DisposeAsync() => driver.DisposeAsync();
 }

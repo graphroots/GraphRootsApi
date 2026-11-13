@@ -14,6 +14,7 @@
   <ItemGroup>
     <ProjectReference Include="..\GraphDb\GraphDb.csproj" />
     <ProjectReference Include="..\GrasshopperLib\GrasshopperLib.csproj" />
+    <ProjectReference Include="..\GraphStoreContractTests\GraphStoreContractTests.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="GH_IO">

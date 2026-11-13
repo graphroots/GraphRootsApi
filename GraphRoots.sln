@@ -19,6 +19,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GraphApi", "GraphApi\GraphA
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GraphApiTests", "GraphApiTests\GraphApiTests.csproj", "{EB822E14-0A8A-482A-9934-771AEF699F70}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GraphStoreContractTests", "GraphStoreContractTests\GraphStoreContractTests.csproj", "{A5531517-3173-4442-BE24-1450B09BB42F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -125,6 +127,18 @@ Global
 		{EB822E14-0A8A-482A-9934-771AEF699F70}.Release|x64.Build.0 = Release|Any CPU
 		{EB822E14-0A8A-482A-9934-771AEF699F70}.Release|x86.ActiveCfg = Release|Any CPU
 		{EB822E14-0A8A-482A-9934-771AEF699F70}.Release|x86.Build.0 = Release|Any CPU
+		{A5531517-3173-4442-BE24-1450B09BB42F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A5531517-3173-4442-BE24-1450B09BB42F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A5531517-3173-4442-BE24-1450B09BB42F}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{A5531517-3173-4442-BE24-1450B09BB42F}.Debug|x64.Build.0 = Debug|Any CPU
+		{A5531517-3173-4442-BE24-1450B09BB42F}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{A5531517-3173-4442-BE24-1450B09BB42F}.Debug|x86.Build.0 = Debug|Any CPU
+		{A5531517-3173-4442-BE24-1450B09BB42F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A5531517-3173-4442-BE24-1450B09BB42F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A5531517-3173-4442-BE24-1450B09BB42F}.Release|x64.ActiveCfg = Release|Any CPU
+		{A5531517-3173-4442-BE24-1450B09BB42F}.Release|x64.Build.0 = Release|Any CPU
+		{A5531517-3173-4442-BE24-1450B09BB42F}.Release|x86.ActiveCfg = Release|Any CPU
+		{A5531517-3173-4442-BE24-1450B09BB42F}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
