@@ -1,8 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <RootNamespace>GraphRoots.GraphDb</RootNamespace>
-    <AssemblyName>GraphDb</AssemblyName>
-    <Description>GraphRoots Neo4j persistence</Description>
+    <RootNamespace>GraphRoots.GraphDb.Neo4j</RootNamespace>
+    <AssemblyName>GraphDb.Neo4j</AssemblyName>
+    <Description>GraphRoots Neo4j storage backend (IGraphStore implementation)</Description>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Neo4j.Driver" />

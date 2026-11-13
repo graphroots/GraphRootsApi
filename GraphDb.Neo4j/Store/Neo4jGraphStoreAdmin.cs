@@ -1,7 +1,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace GraphRoots.GraphDb;
+namespace GraphRoots.GraphDb.Neo4j;
 
 /// <summary>
 /// Neo4j lifecycle: connectivity check plus <see cref="IDbOperations.EnsureSchema"/>, and <c>DETACH DELETE</c> purge.

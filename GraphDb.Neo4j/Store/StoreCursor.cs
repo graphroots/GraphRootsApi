@@ -1,7 +1,7 @@
 using System;
 using System.Text;
 
-namespace GraphRoots.GraphDb;
+namespace GraphRoots.GraphDb.Neo4j;
 
 static class StoreCursor
 {

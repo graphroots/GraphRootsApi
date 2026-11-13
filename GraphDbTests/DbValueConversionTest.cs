@@ -1,5 +1,6 @@
 using System;
 using GraphRoots.GraphDb;
+using GraphRoots.GraphDb.Neo4j;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Neo4j.Driver;
 

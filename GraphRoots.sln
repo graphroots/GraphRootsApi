@@ -7,7 +7,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GraphDbInterfaces", "GraphD
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GrasshopperInterfaces", "GrasshopperInterfaces\GrasshopperInterfaces.csproj", "{6389CA11-4790-4706-8EA0-C8DCFD94AC49}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GraphDb", "GraphDb\GraphDb.csproj", "{124CCE6D-2253-4BEE-989F-A68C059004AA}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GraphDb.Neo4j", "GraphDb.Neo4j\GraphDb.Neo4j.csproj", "{124CCE6D-2253-4BEE-989F-A68C059004AA}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GrasshopperLib", "GrasshopperLib\GrasshopperLib.csproj", "{FDB11BF1-4907-4F2E-9A8F-B47833C453B4}"
 EndProject

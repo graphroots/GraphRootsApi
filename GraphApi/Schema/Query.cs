@@ -85,7 +85,7 @@ public class Query
             FilterMapping.Pattern(pattern),
             FilterMapping.Scope(scope),
             FilterMapping.Options(options),
-            FilterMapping.Page(first, after, SubgraphMatcher.MaxMatchResults, includeTotalCount: SelectedTotal(context)),
+            FilterMapping.Page(first, after, StoreLimits.MaxMatchResults, includeTotalCount: SelectedTotal(context)),
             cancellationToken);
         var mapped = new PageResult<GqlSubgraphMatch>
         {

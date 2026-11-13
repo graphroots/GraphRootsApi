@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using GraphRoots.GraphDb;
+using GraphRoots.GraphDb.Neo4j;
 using GraphRoots.Grasshopper;
 using GraphRoots.Grasshopper.Parser;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -28,7 +29,7 @@ namespace GraphRoots.GraphDbTests
             var settings = LiveNeo4j.Require();
             Driver = GraphDatabase.Driver(settings.Uri, AuthTokens.Basic(settings.User, settings.Password));
             DbOperations = new DbOperations(Driver, settings.Database);
-            Store = new GraphStore(DbOperations);
+            Store = new Neo4jGraphStore(DbOperations);
             await DbOperations.EnsureSchema();
         }
 

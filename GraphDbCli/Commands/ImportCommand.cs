@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using CommandLine;
 using GraphRoots.GraphDb;
+using GraphRoots.GraphDb.Neo4j;
 using GraphRoots.Grasshopper;
 using GraphRoots.Grasshopper.Parser;
 using Microsoft.Extensions.DependencyInjection;

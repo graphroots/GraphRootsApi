@@ -1,5 +1,6 @@
 using System;
 using GraphRoots.GraphDb;
+using GraphRoots.GraphDb.Neo4j;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Neo4j.Driver;
@@ -161,7 +162,7 @@ public static class GraphApiServices
 
         services.AddSingleton<IDriver>(_ => GraphDatabase.Driver(uri, AuthTokens.Basic(user, password)));
         services.AddSingleton<IDbOperations>(sp => new DbOperations(sp.GetRequiredService<IDriver>(), database));
-        services.AddSingleton<IGraphStore>(sp => new GraphStore(sp.GetRequiredService<IDbOperations>()));
+        services.AddSingleton<IGraphStore>(sp => new Neo4jGraphStore(sp.GetRequiredService<IDbOperations>()));
         services.AddHostedService<GraphStoreStartup>();
         return services;
     }

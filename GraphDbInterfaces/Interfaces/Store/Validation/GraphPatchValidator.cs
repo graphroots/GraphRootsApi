@@ -5,11 +5,6 @@ namespace GraphRoots.GraphDb;
 
 public static class GraphPatchValidator
 {
-    public const int MaxOperations = 500;
-    public const int MaxCreateNodes = 200;
-    public const int MaxCreatePorts = 400;
-    public const int MaxCreateEdges = 400;
-
     public static void Validate(GraphPatch patch)
     {
         if (string.IsNullOrWhiteSpace(patch.DocumentId))
@@ -32,14 +27,14 @@ public static class GraphPatchValidator
             createPorts.Count + updatePorts.Count + deletePorts.Count +
             createEdges.Count + deleteEdges.Count +
             addToGroups.Count + removeFromGroups.Count + setExtensions.Count;
-        if (total > MaxOperations)
-            throw GraphStoreException.InvalidArgument($"Patch exceeds {MaxOperations} operations.");
-        if (createNodes.Count > MaxCreateNodes)
-            throw GraphStoreException.InvalidArgument($"createNodes exceeds {MaxCreateNodes}.");
-        if (createPorts.Count > MaxCreatePorts)
-            throw GraphStoreException.InvalidArgument($"createPorts exceeds {MaxCreatePorts}.");
-        if (createEdges.Count > MaxCreateEdges)
-            throw GraphStoreException.InvalidArgument($"createEdges exceeds {MaxCreateEdges}.");
+        if (total > StoreLimits.MaxPatchOperations)
+            throw GraphStoreException.InvalidArgument($"Patch exceeds {StoreLimits.MaxPatchOperations} operations.");
+        if (createNodes.Count > StoreLimits.MaxPatchCreateNodes)
+            throw GraphStoreException.InvalidArgument($"createNodes exceeds {StoreLimits.MaxPatchCreateNodes}.");
+        if (createPorts.Count > StoreLimits.MaxPatchCreatePorts)
+            throw GraphStoreException.InvalidArgument($"createPorts exceeds {StoreLimits.MaxPatchCreatePorts}.");
+        if (createEdges.Count > StoreLimits.MaxPatchCreateEdges)
+            throw GraphStoreException.InvalidArgument($"createEdges exceeds {StoreLimits.MaxPatchCreateEdges}.");
 
         RequireUnique(createNodes.Select(n => n.NodeId), "createNodes.nodeId");
         RequireUnique(updateNodes.Select(n => n.NodeId), "updateNodes.nodeId");
@@ -98,7 +93,7 @@ public static class GraphPatchValidator
             if (op.Entity != StoreEntityKind.Edge && string.IsNullOrWhiteSpace(op.Id))
                 throw GraphStoreException.InvalidArgument("setExtensions.id is required.");
             foreach (var entry in op.Entries)
-                DbExtensionProperties.ValidateKey(entry.Key);
+                ExtensionKeys.ValidateKey(entry.Key);
         }
     }
 

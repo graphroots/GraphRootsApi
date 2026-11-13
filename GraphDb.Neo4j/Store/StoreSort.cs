@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace GraphRoots.GraphDb;
+namespace GraphRoots.GraphDb.Neo4j;
 
 static class StoreSort
 {

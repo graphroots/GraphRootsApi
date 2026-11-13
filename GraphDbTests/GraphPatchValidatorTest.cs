@@ -73,7 +73,7 @@ public class GraphPatchValidatorTest
     public void RejectsOversizedPatch()
     {
         var deletes = new List<string>();
-        for (var i = 0; i < GraphPatchValidator.MaxOperations + 1; i++)
+        for (var i = 0; i < StoreLimits.MaxPatchOperations + 1; i++)
             deletes.Add($"n{i}");
         var patch = Base();
         var ex = Assert.ThrowsExactly<GraphStoreException>(() => GraphPatchValidator.Validate(new GraphPatch

@@ -4,9 +4,9 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace GraphRoots.GraphDb;
+namespace GraphRoots.GraphDb.Neo4j;
 
-public sealed partial class GraphStore
+public sealed partial class Neo4jGraphStore
 {
     public async Task<DocumentGraphResult> GetDocumentGraph(string documentId, Guid versionId, CancellationToken cancellationToken = default)
     {
@@ -42,8 +42,8 @@ RETURN nodes, ports, edges, pairs",
             cancellationToken);
 
         var total = nodes.Count + ports.Count + edges.Count;
-        if (total > MaxDenseGraphEntities)
-            throw GraphStoreException.ResultTooLarge($"Document graph has {total} entities; maximum is {MaxDenseGraphEntities}.");
+        if (total > StoreLimits.MaxDenseGraphEntities)
+            throw GraphStoreException.ResultTooLarge($"Document graph has {total} entities; maximum is {StoreLimits.MaxDenseGraphEntities}.");
 
         return new DocumentGraphResult
         {
@@ -263,8 +263,8 @@ RETURN DISTINCT n AS Item";
 
     public async Task<DataflowPathResult?> FindPath(string documentId, Guid versionId, string fromNodeId, string toNodeId, int maxHops, CancellationToken cancellationToken = default)
     {
-        if (maxHops < 1 || maxHops > SubgraphMatcher.MaxHops)
-            throw GraphStoreException.InvalidArgument($"maxHops must be between 1 and {SubgraphMatcher.MaxHops}.");
+        if (maxHops < 1 || maxHops > StoreLimits.MaxHops)
+            throw GraphStoreException.InvalidArgument($"maxHops must be between 1 and {StoreLimits.MaxHops}.");
 
         DataflowPathResult? path = null;
         await _db.QueryRecords(
@@ -293,8 +293,8 @@ RETURN [n IN nodes(p) WHERE n:Node | n] AS nodes,
 
     static void ValidateHops(int minHops, int maxHops)
     {
-        if (minHops < 1 || maxHops < minHops || maxHops > SubgraphMatcher.MaxHops)
-            throw GraphStoreException.InvalidArgument($"Hops must satisfy 1 <= minHops <= maxHops <= {SubgraphMatcher.MaxHops}.");
+        if (minHops < 1 || maxHops < minHops || maxHops > StoreLimits.MaxHops)
+            throw GraphStoreException.InvalidArgument($"Hops must satisfy 1 <= minHops <= maxHops <= {StoreLimits.MaxHops}.");
     }
 
     sealed class StatsCountRow

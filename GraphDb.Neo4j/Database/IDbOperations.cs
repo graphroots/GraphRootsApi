@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace GraphRoots.GraphDb;
+namespace GraphRoots.GraphDb.Neo4j;
 
 public interface IDbOperations
 {

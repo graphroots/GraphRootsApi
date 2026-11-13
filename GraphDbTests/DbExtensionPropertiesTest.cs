@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using GraphRoots.GraphDb;
+using GraphRoots.GraphDb.Neo4j;
 using GraphRoots.Grasshopper;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -11,7 +12,7 @@ namespace GraphRoots.GraphDbTests
         [TestMethod]
         public void Flatten_WritesPrefixedKeys()
         {
-            var core = DbExtensionProperties.CorePropertyNames(typeof(Node));
+            var core = ExtensionKeys.CorePropertyNames(typeof(Node));
             var target = new Dictionary<string, object>();
             var extensions = new Dictionary<string, object?>
             {
@@ -28,7 +29,7 @@ namespace GraphRoots.GraphDbTests
         [TestMethod]
         public void Flatten_RejectsKeyWithoutPrefix()
         {
-            var core = DbExtensionProperties.CorePropertyNames(typeof(Node));
+            var core = ExtensionKeys.CorePropertyNames(typeof(Node));
             var target = new Dictionary<string, object>();
 
             Assert.ThrowsExactly<GraphStoreException>(() =>
@@ -41,7 +42,7 @@ namespace GraphRoots.GraphDbTests
         [TestMethod]
         public void Flatten_RejectsCollisionWithCoreProperty()
         {
-            var core = DbExtensionProperties.CorePropertyNames(typeof(Node));
+            var core = ExtensionKeys.CorePropertyNames(typeof(Node));
             var target = new Dictionary<string, object>();
 
             Assert.ThrowsExactly<GraphStoreException>(() =>
@@ -54,7 +55,7 @@ namespace GraphRoots.GraphDbTests
         [TestMethod]
         public void Rehydrate_CollectsPrefixedKeysOnly()
         {
-            var core = DbExtensionProperties.CorePropertyNames(typeof(Node));
+            var core = ExtensionKeys.CorePropertyNames(typeof(Node));
             var properties = new Dictionary<string, object>
             {
                 ["Name"] = "Sphere",
@@ -71,7 +72,7 @@ namespace GraphRoots.GraphDbTests
         [TestMethod]
         public void Flatten_RejectsHostileKeys()
         {
-            var core = DbExtensionProperties.CorePropertyNames(typeof(Node));
+            var core = ExtensionKeys.CorePropertyNames(typeof(Node));
             foreach (var key in new[] { "gh.`inject", "GH.foo", "gh.", "n.TypeId} REMOVE n", "gh.foo bar" })
             {
                 var ex = Assert.ThrowsExactly<GraphStoreException>(() =>
@@ -86,19 +87,19 @@ namespace GraphRoots.GraphDbTests
         [TestMethod]
         public void NormalizeValue_AcceptsScalarsAndScalarArrays()
         {
-            Assert.AreEqual("hi", DbExtensionProperties.NormalizeValue("hi"));
-            Assert.AreEqual(true, DbExtensionProperties.NormalizeValue(true));
-            Assert.AreEqual(3d, DbExtensionProperties.NormalizeValue(3));
-            CollectionAssert.AreEqual(new object[] { 1d, 2d }, (List<object>)DbExtensionProperties.NormalizeValue(new[] { 1, 2 }));
+            Assert.AreEqual("hi", ExtensionKeys.NormalizeValue("hi"));
+            Assert.AreEqual(true, ExtensionKeys.NormalizeValue(true));
+            Assert.AreEqual(3d, ExtensionKeys.NormalizeValue(3));
+            CollectionAssert.AreEqual(new object[] { 1d, 2d }, (List<object>)ExtensionKeys.NormalizeValue(new[] { 1, 2 }));
         }
 
         [TestMethod]
         public void NormalizeValue_RejectsObjectsAndNestedArrays()
         {
             Assert.ThrowsExactly<GraphStoreException>(() =>
-                DbExtensionProperties.NormalizeValue(new Dictionary<string, object?> { ["a"] = 1 }));
+                ExtensionKeys.NormalizeValue(new Dictionary<string, object?> { ["a"] = 1 }));
             Assert.ThrowsExactly<GraphStoreException>(() =>
-                DbExtensionProperties.NormalizeValue(new object[] { new[] { 1 } }));
+                ExtensionKeys.NormalizeValue(new object[] { new[] { 1 } }));
         }
 
         [TestMethod]

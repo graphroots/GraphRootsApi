@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using GraphRoots.GraphDb;
+using GraphRoots.GraphDb.Neo4j;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Neo4j.Driver;
 
@@ -45,7 +46,7 @@ static class LiveNeo4j
         var backend = new Neo4jTestBackend(
             driver,
             db,
-            new GraphStore(db),
+            new Neo4jGraphStore(db),
             new Neo4jGraphStoreAdmin(db, $"{settings.Uri} database {settings.Database}"));
         await backend.Admin.Initialize();
         return backend;

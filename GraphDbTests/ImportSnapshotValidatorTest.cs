@@ -117,7 +117,7 @@ public class ImportSnapshotValidatorTest
     public void RejectsOversizedSnapshot()
     {
         var nodes = new List<ImportNode>();
-        for (var i = 0; i < GraphStore.MaxDenseGraphEntities + 1; i++)
+        for (var i = 0; i < StoreLimits.MaxDenseGraphEntities + 1; i++)
         {
             nodes.Add(new ImportNode
             {

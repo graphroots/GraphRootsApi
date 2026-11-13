@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using GraphRoots.GraphDb;
+using GraphRoots.GraphDb.Neo4j;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace GraphRoots.GraphDbTests;
@@ -18,7 +19,7 @@ public class SubgraphMatcherTest
             Edges = [new PatternEdge { SourcePort = "p", TargetPort = "p" }],
             Connections = [new PatternConnection { SourceNode = "a", TargetNode = "b" }],
         };
-        var ex = Assert.ThrowsExactly<GraphStoreException>(() => SubgraphMatcher.DetectMode(pattern));
+        var ex = Assert.ThrowsExactly<GraphStoreException>(() => SubgraphPatternValidator.DetectMode(pattern));
         Assert.AreEqual(GraphStoreException.Codes.InvalidPattern, ex.Code);
     }
 
@@ -31,17 +32,17 @@ public class SubgraphMatcherTest
             Ports = [new PatternPort { Key = "p", Node = "missing" }],
             Edges = [new PatternEdge { SourcePort = "p", TargetPort = "p" }],
         };
-        var ex = Assert.ThrowsExactly<GraphStoreException>(() => SubgraphMatcher.Validate(pattern));
+        var ex = Assert.ThrowsExactly<GraphStoreException>(() => SubgraphPatternValidator.Validate(pattern));
         Assert.AreEqual(GraphStoreException.Codes.InvalidPattern, ex.Code);
     }
 
     [TestMethod]
     public void Validate_RejectsOversizedPattern()
     {
-        var nodes = Enumerable.Range(0, SubgraphMatcher.MaxPatternNodes + 1)
+        var nodes = Enumerable.Range(0, StoreLimits.MaxPatternNodes + 1)
             .Select(i => new PatternNode { Key = $"n{i}" })
             .ToList();
-        var ex = Assert.ThrowsExactly<GraphStoreException>(() => SubgraphMatcher.Validate(new SubgraphPattern { Nodes = nodes }));
+        var ex = Assert.ThrowsExactly<GraphStoreException>(() => SubgraphPatternValidator.Validate(new SubgraphPattern { Nodes = nodes }));
         Assert.AreEqual(GraphStoreException.Codes.PatternTooLarge, ex.Code);
     }
 
@@ -149,7 +150,7 @@ public class SubgraphMatcherTest
     [TestMethod]
     public void Validate_RejectsDuplicateKeys()
     {
-        var ex = Assert.ThrowsExactly<GraphStoreException>(() => SubgraphMatcher.Validate(new SubgraphPattern
+        var ex = Assert.ThrowsExactly<GraphStoreException>(() => SubgraphPatternValidator.Validate(new SubgraphPattern
         {
             Nodes = [new PatternNode { Key = "a" }, new PatternNode { Key = "a" }],
         }));
@@ -323,7 +324,7 @@ public class SubgraphMatcherTest
             afterCursor: null,
             limit: 1);
 
-        StringAssert.Contains(compiled.Cypher, $"NESTS*0..{SubgraphMatcher.MaxHops}");
+        StringAssert.Contains(compiled.Cypher, $"NESTS*0..{StoreLimits.MaxHops}");
         StringAssert.Contains(compiled.Cypher, "collect(DISTINCT nestedDoc.VersionId) AS scopeVersionIds");
         Assert.IsFalse(compiled.Cypher.Contains("+ scopeDoc.VersionId", StringComparison.Ordinal));
         AssertNoConsecutiveWhere(compiled.Cypher);

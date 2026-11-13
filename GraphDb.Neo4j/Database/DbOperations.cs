@@ -8,7 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Neo4j.Driver;
 
-namespace GraphRoots.GraphDb;
+namespace GraphRoots.GraphDb.Neo4j;
 
 public class DbOperations : IDbOperations
 {
@@ -132,7 +132,7 @@ public class DbOperations : IDbOperations
 
     static IDictionary<string, object?>? GetExtensions(object node)
     {
-        var property = node.GetType().GetProperty(DbExtensionProperties.PropertyName);
+        var property = node.GetType().GetProperty(ExtensionKeys.PropertyName);
         return property?.GetValue(node) as IDictionary<string, object?>;
     }
 
@@ -140,7 +140,7 @@ public class DbOperations : IDbOperations
 
     static HashSet<string> CoreNames(Type type)
     {
-        return CoreNameCache.GetOrAdd(type, DbExtensionProperties.CorePropertyNames);
+        return CoreNameCache.GetOrAdd(type, ExtensionKeys.CorePropertyNames);
     }
 
     public async Task ExecuteWrite(Func<CancellationToken, Task> action, CancellationToken cancellationToken = default)
@@ -529,7 +529,7 @@ DELETE r";
                 throw new InvalidOperationException($"Cannot map value of type {valueType} to property {key} of type {propertyInfo.PropertyType} (consider extending the implemented ValueSetters)");
         }
 
-        var extensionsProperty = target.GetType().GetProperty(DbExtensionProperties.PropertyName);
+        var extensionsProperty = target.GetType().GetProperty(ExtensionKeys.PropertyName);
         if (extensionsProperty != null && extensionsProperty.CanWrite)
         {
             var rehydrated = DbExtensionProperties.Rehydrate(properties, CoreNames(target.GetType()));

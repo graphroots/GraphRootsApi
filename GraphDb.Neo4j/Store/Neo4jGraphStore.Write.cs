@@ -6,9 +6,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using Neo4j.Driver;
 
-namespace GraphRoots.GraphDb;
+namespace GraphRoots.GraphDb.Neo4j;
 
-public sealed partial class GraphStore
+public sealed partial class Neo4jGraphStore
 {
     public async Task<Document> ForkDocument(string documentId, Guid versionId, string? newDocumentId, CancellationToken cancellationToken = default)
     {
@@ -65,7 +65,7 @@ public sealed partial class GraphStore
             throw GraphStoreException.InvalidArgument("mergeDocument.otherParents must contain at least one parent.");
 
         var head = await GetBasedOn(working.DocumentId, working.VersionId, cancellationToken);
-        var ancestors = await TraverseHistory(working.DocumentId, working.VersionId, HistoryDirection.Ancestors, 1, SubgraphMatcher.MaxHops, cancellationToken);
+        var ancestors = await TraverseHistory(working.DocumentId, working.VersionId, HistoryDirection.Ancestors, 1, StoreLimits.MaxHops, cancellationToken);
         var ancestorKeys = new HashSet<(string DocumentId, Guid VersionId)>(ancestors.Select(a => (a.DocumentId, a.VersionId)));
         var parentMap = new Dictionary<(string DocumentId, Guid VersionId), Document>();
         foreach (var parent in head)
@@ -403,21 +403,21 @@ RETURN 1 AS Item",
                 await EnsureNode(versionId, op.Id, cancellationToken);
                 match = "MATCH (n:Node {VersionId: $versionId, NodeId: $id})";
                 parameters = new { versionId = vid, id = op.Id };
-                coreNames = DbExtensionProperties.CorePropertyNames(typeof(Node));
+                coreNames = ExtensionKeys.CorePropertyNames(typeof(Node));
                 break;
             case StoreEntityKind.Port:
                 if (await GetPort(versionId, op.Id, cancellationToken) == null)
                     throw GraphStoreException.NotFound($"Port '{op.Id}' was not found.");
                 match = "MATCH (n:Port {VersionId: $versionId, PortId: $id})";
                 parameters = new { versionId = vid, id = op.Id };
-                coreNames = DbExtensionProperties.CorePropertyNames(typeof(Port));
+                coreNames = ExtensionKeys.CorePropertyNames(typeof(Port));
                 break;
             case StoreEntityKind.Document:
                 if (!string.Equals(op.Id, document.DocumentId, StringComparison.Ordinal))
                     throw GraphStoreException.InvalidArgument("setExtensions.id must match the patch documentId.");
                 match = "MATCH (n:Document {DocumentId: $id, VersionId: $versionId})";
                 parameters = new { versionId = vid, id = document.DocumentId };
-                coreNames = DbExtensionProperties.CorePropertyNames(typeof(Document));
+                coreNames = ExtensionKeys.CorePropertyNames(typeof(Document));
                 break;
             case StoreEntityKind.Edge:
                 if (string.IsNullOrEmpty(op.SourcePortId) || string.IsNullOrEmpty(op.TargetPortId))
@@ -426,7 +426,7 @@ RETURN 1 AS Item",
                     throw GraphStoreException.NotFound($"Edge {op.SourcePortId}->{op.TargetPortId} was not found.");
                 match = "MATCH ()-[n:EDGE {VersionId: $versionId, SourcePortId: $sourcePortId, TargetPortId: $targetPortId}]->()";
                 parameters = new { versionId = vid, sourcePortId = op.SourcePortId, targetPortId = op.TargetPortId };
-                coreNames = DbExtensionProperties.CorePropertyNames(typeof(Edge));
+                coreNames = ExtensionKeys.CorePropertyNames(typeof(Edge));
                 break;
             default:
                 throw GraphStoreException.InvalidArgument($"Unsupported entity kind '{op.Entity}'.");
@@ -434,7 +434,7 @@ RETURN 1 AS Item",
 
         foreach (var entry in op.Entries)
         {
-            DbExtensionProperties.ValidateKey(entry.Key, coreNames);
+            ExtensionKeys.ValidateKey(entry.Key, coreNames);
             var dict = ToDictionary(parameters);
             dict["extKey"] = entry.Key;
             if (entry.EqualsValue == null)
@@ -447,7 +447,7 @@ RETURN 1 AS Item",
             }
             else
             {
-                dict["value"] = DbExtensionProperties.NormalizeValue(entry.EqualsValue);
+                dict["value"] = ExtensionKeys.NormalizeValue(entry.EqualsValue);
                 await _db.QueryRecords(
                     $"{match} SET {DbExtensionProperties.CypherDynamicProperty("n", "extKey")} = $value RETURN 1 AS Item",
                     dict,

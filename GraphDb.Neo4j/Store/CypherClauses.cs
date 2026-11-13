@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace GraphRoots.GraphDb;
+namespace GraphRoots.GraphDb.Neo4j;
 
 sealed class CypherClauses
 {
@@ -58,9 +58,9 @@ sealed class CypherClauses
 
     public void Extension(string varName, ExtensionPredicate predicate)
     {
-        DbExtensionProperties.ValidateKey(predicate.Key);
+        ExtensionKeys.ValidateKey(predicate.Key);
         var key = Bind("extKey", predicate.Key);
-        var value = Bind("ext", predicate.EqualsValue == null ? null : DbExtensionProperties.NormalizeValue(predicate.EqualsValue));
+        var value = Bind("ext", predicate.EqualsValue == null ? null : ExtensionKeys.NormalizeValue(predicate.EqualsValue));
         Add($"{DbExtensionProperties.CypherDynamicProperty(varName, key)} = ${value}");
     }
 
