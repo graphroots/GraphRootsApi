@@ -1,6 +1,6 @@
 # Computational graph model
 
-GraphRoots stores computational graphs in Neo4j using **tool-neutral labels**. The store (`GraphDbInterfaces` / `GraphDb`) has no Grasshopper dependency. Grasshopper is a first-class importer (`GrasshopperInterfaces` / `GrasshopperLib`): the GHX parser stays faithful to GH, and the snapshot builder maps core nodes plus `gh.*` extension properties. Persistence is GraphQL `importSnapshot` (MERGE). Dynamo (and later solvers) use the same core and their own prefix (`dyn.*`).
+GraphRoots stores computational graphs behind a tool-neutral store contract (`GraphDbInterfaces`). The reference backend (`GraphDb.Neo4j`) persists them in Neo4j using **tool-neutral labels**; `GraphDb.Hosting` selects the backend (`GRAPHROOTS_STORE`, default `neo4j`). Neither has a Grasshopper dependency. Grasshopper is a first-class importer (`GrasshopperInterfaces` / `GrasshopperLib`): the GHX parser stays faithful to GH, and the snapshot builder maps core nodes plus `gh.*` extension properties. Persistence is GraphQL `importSnapshot` (MERGE). Dynamo (and later solvers) use the same core and their own prefix (`dyn.*`).
 
 Schema version on every persisted type is **2**. This is a breaking change; re-import with `--purge --yes` or a new database. There is no migrator. `--purge` wipes all nodes and requires `--yes`; the CLI prints the target URI before running.
 
@@ -96,7 +96,7 @@ Working copies created through GraphQL (`forkDocument`, `createDocument`) use a 
 
 ## Schema constraints and indexes
 
-`IDbOperations.EnsureSchema` (called once by GraphApi startup and live tests, not by the import CLI) is idempotent:
+The Neo4j backend's `IDbOperations.EnsureSchema` (run by `IGraphStoreAdmin.Initialize` at GraphApi startup and before live tests, not by the import CLI) is idempotent:
 
 1. Drops leftover **unscoped** range index names from before indexes were label-scoped (`node_range_index_VersionId`, `node_range_index_DocumentId_VersionId`, and the other `node_range_index_{properties}` names). Current indexes are `node_range_index_{label}_{properties}`.
 2. Creates uniqueness constraints:

@@ -31,9 +31,19 @@ Live Neo4j tests skip unless `NEO4J_TEST_URI` and `NEO4J_TEST_DATABASE` are set.
 ```bash
 docker compose -f docker/neo4j/compose.yaml up -d --wait
 dotnet test GraphDbTests --settings docker/neo4j/live-tests.runsettings
+dotnet test GraphApiTests --settings docker/neo4j/live-tests.runsettings
 ```
 
-Do not point those variables at `GraphRoots`, `neo4j`, or `system`.
+Run them one after the other; both purge the same test database. Do not point those variables at `GraphRoots`, `neo4j`, or `system`.
+
+## Storage backends
+
+`GraphApi` and `GraphDbCli` only see `IGraphStore` and `IGraphStoreAdmin`; `GraphDb.Hosting` picks the implementation from `GRAPHROOTS_STORE`. To add a backend:
+
+1. Create `GraphDb.<Name>` referencing `GraphDbInterfaces` only, and implement `IGraphStore` and `IGraphStoreAdmin`.
+2. Reuse the shared contract code instead of re-implementing it: `StoreLimits`, `ExtensionKeys`, `ImportSnapshotValidator`, `GraphPatchValidator`, `SubgraphPatternValidator`, and `DocumentLifecycle` (writability, fork parents, merge parents).
+3. Add an `Add<Name>GraphStore(...)` registration and a case in `GraphStoreBackends` (`GraphDb.Hosting`).
+4. In the backend's test project, derive a `[TestClass]` from `GraphStoreContractTestBase` (`GraphStoreContractTests`), and from `GraphQLStoreTestBase` in `GraphApiTests`. Behaviour every backend must share goes into those base classes, seeded only through the public store contract; backend-specific tests stay in the backend's own test project.
 
 ## Collaboration
 

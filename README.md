@@ -1,6 +1,6 @@
 # GraphRoots
 
-.NET reference implementation of the GraphRoots computational graph store: a tool-neutral Neo4j core, a Grasshopper importer, an import CLI, and a GraphQL API.
+.NET reference implementation of the GraphRoots computational graph store: a tool-neutral store contract with a Neo4j backend, a Grasshopper importer, an import CLI, and a GraphQL API.
 
 Consortium context (who we are, why this exists, how we meet): [GRAPHROOTS.md](GRAPHROOTS.md).
 
@@ -8,11 +8,13 @@ Consortium context (who we are, why this exists, how we meet): [GRAPHROOTS.md](G
 
 | Project | Role |
 | --- | --- |
-| `GraphDbInterfaces` | Tool-neutral model, store contracts, UUID5 |
-| `GraphDb` | Neo4j mapper, schema, GraphQL-facing store |
+| `GraphDbInterfaces` | Tool-neutral model, store contract (`IGraphStore`, `IGraphStoreAdmin`), shared validation, limits, and version-control rules, UUID5 |
+| `GraphDb.Neo4j` | Neo4j storage backend: mapper, schema, Cypher |
+| `GraphDb.Hosting` | Picks the storage backend from `GRAPHROOTS_STORE` (default `neo4j`); hosts reference this, not a backend |
 | `GrasshopperInterfaces` / `GrasshopperLib` | GHX/GH parser and snapshot builder (`gh.*` extensions) |
 | `GraphDbCli` | `import` command: parse GHX/GH, POST `importSnapshot` |
 | `GraphApi` | GraphQL host (no Grasshopper dependency) |
+| `GraphStoreContractTests` | Backend-agnostic store tests; each backend's test project runs them |
 | `GraphDbTests` / `GraphApiTests` | Offline suite plus optional live Neo4j tests |
 
 Also in the tree: [docs/](docs/README.md) (graph model and GraphQL contract), [testdata/](testdata/) (parser fixtures), [docker/neo4j/](docker/neo4j/compose.yaml) (optional app database and isolated live-test database), [lib/](lib/README.md) (local `GH_IO.dll`, not committed).
@@ -46,8 +48,11 @@ dotnet user-secrets set NEO4J_URI "neo4j://127.0.0.1" --project GraphDbCli
 
 `GraphApi` reads the same secrets when `ASPNETCORE_ENVIRONMENT=Development` (the default launch profile).
 
+The storage backend is chosen by `GRAPHROOTS_STORE` (user secrets or environment). Neo4j is the default and currently the only backend.
+
 | Variable | Default |
 | --- | --- |
+| `GRAPHROOTS_STORE` | `neo4j` |
 | `NEO4J_URI` | `neo4j://127.0.0.1` |
 | `NEO4J_USER` | `neo4j` |
 | `NEO4J_PASSWORD` | (required) |
@@ -66,7 +71,7 @@ The `neo4j-test` service (`graphtest` on port 17687) is a **test** instance and 
 
 ## Run
 
-Start GraphApi (it applies `EnsureSchema` on startup), then import. The CLI POSTs `importSnapshot` to GraphQL (default `http://127.0.0.1:5088/graphql`, or `GRAPHQL_URL` / `--graphql-url`).
+Start GraphApi (it initializes the storage backend on startup; for Neo4j that is a connectivity check and `EnsureSchema`), then import. The CLI POSTs `importSnapshot` to GraphQL (default `http://127.0.0.1:5088/graphql`, or `GRAPHQL_URL` / `--graphql-url`).
 
 ```bash
 dotnet run --project GraphApi
@@ -75,7 +80,7 @@ dotnet run --project GraphDbCli -- import --path testdata/ParserExample1.ghx
 
 GraphQL playground (Banana Cake Pop): [http://127.0.0.1:5088/graphql](http://127.0.0.1:5088/graphql).
 
-`--purge --yes` still opens Neo4j and wipes all nodes. The CLI prints the GraphQL target before import, and the Neo4j URI before purge. Import no longer calls `EnsureSchema`.
+`--purge --yes` wipes all data in the configured backend directly, not through GraphQL (for Neo4j: every node in `NEO4J_DATABASE`). The CLI prints the GraphQL target before import and the storage target before purge. Import does not initialize the schema.
 
 ## Tests
 
@@ -93,7 +98,7 @@ dotnet test GraphDbTests --settings docker/neo4j/live-tests.runsettings
 dotnet test GraphApiTests --settings docker/neo4j/live-tests.runsettings
 ```
 
-That container is Neo4j `2026.08-community`, database `graphtest`, Bolt `bolt://127.0.0.1:17687`. Tests refuse `GraphRoots` / `neo4j` / `system` and purge `graphtest` before each case.
+That container is Neo4j `2026.08-community`, database `graphtest`, Bolt `bolt://127.0.0.1:17687`. Tests refuse `GraphRoots` / `neo4j` / `system` and purge `graphtest` before each case. Run the two live projects one after the other: both purge `graphtest`, so `dotnet test GraphRoots.sln` with the live settings runs them in parallel and they fail each other.
 
 `docker compose -f docker/neo4j/compose.yaml down -v` recreates `graphtest` and drops `neo4j-app-data` (the Community default database name is set only on first DBMS create).
 

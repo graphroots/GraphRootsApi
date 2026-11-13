@@ -23,10 +23,11 @@ dotnet run --project GraphApi
 
 Default bind: `http://127.0.0.1:5088`. Banana Cake Pop is at `/graphql`. There is no authentication in v1.
 
-The host refuses to start without `NEO4J_PASSWORD`, verifies connectivity to `NEO4J_DATABASE` (not the server default `neo4j`), and applies the expected constraints/indexes (`EnsureSchema`) before serving traffic.
+The host selects the storage backend from `GRAPHROOTS_STORE` (default `neo4j`) and initializes it before serving traffic. With Neo4j it refuses to start without `NEO4J_PASSWORD`, verifies connectivity to `NEO4J_DATABASE` (not the server default `neo4j`), and applies the expected constraints/indexes (`EnsureSchema`).
 
 | Variable | Default |
 | --- | --- |
+| `GRAPHROOTS_STORE` | `neo4j` |
 | `NEO4J_URI` | `neo4j://127.0.0.1` |
 | `NEO4J_USER` | `neo4j` |
 | `NEO4J_PASSWORD` | (required) |
