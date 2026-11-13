@@ -2,8 +2,8 @@ using System;
 using System.Threading.Tasks;
 using GraphRoots.GraphDb;
 using GraphRoots.GraphDb.Neo4j;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Neo4j.Driver;
 
 namespace GraphRoots.GraphDbTests;
 
@@ -36,30 +36,33 @@ static class LiveNeo4j
     }
 
     /// <summary>
-    /// Open the isolated test database and ensure its schema. Inconclusive when the live settings are missing.
+    /// Register the Neo4j backend exactly as the hosts do, against the isolated test database,
+    /// and ensure its schema. Inconclusive when the live settings are missing.
     /// </summary>
     public static async Task<Neo4jTestBackend> Start()
     {
         var settings = Require();
-        var driver = GraphDatabase.Driver(settings.Uri, AuthTokens.Basic(settings.User, settings.Password));
-        var db = new DbOperations(driver, settings.Database);
-        var backend = new Neo4jTestBackend(
-            driver,
-            db,
-            new Neo4jGraphStore(db),
-            new Neo4jGraphStoreAdmin(db, $"{settings.Uri} database {settings.Database}"));
+        var services = new ServiceCollection();
+        services.AddNeo4jGraphStore(new Neo4jStoreOptions
+        {
+            Uri = settings.Uri,
+            User = settings.User,
+            Password = settings.Password,
+            Database = settings.Database,
+        });
+        var backend = new Neo4jTestBackend(services.BuildServiceProvider());
         await backend.Admin.Initialize();
         return backend;
     }
 }
 
-sealed class Neo4jTestBackend(IDriver driver, IDbOperations db, IGraphStore store, IGraphStoreAdmin admin) : IAsyncDisposable
+sealed class Neo4jTestBackend(ServiceProvider services) : IAsyncDisposable
 {
-    public IDbOperations Db { get; } = db;
+    public IDbOperations Db => services.GetRequiredService<IDbOperations>();
 
-    public IGraphStore Store { get; } = store;
+    public IGraphStore Store => services.GetRequiredService<IGraphStore>();
 
-    public IGraphStoreAdmin Admin { get; } = admin;
+    public IGraphStoreAdmin Admin => services.GetRequiredService<IGraphStoreAdmin>();
 
-    public ValueTask DisposeAsync() => driver.DisposeAsync();
+    public ValueTask DisposeAsync() => services.DisposeAsync();
 }

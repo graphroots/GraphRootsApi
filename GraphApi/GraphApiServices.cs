@@ -1,9 +1,7 @@
 using System;
-using GraphRoots.GraphDb;
-using GraphRoots.GraphDb.Neo4j;
+using GraphRoots.GraphDb.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Neo4j.Driver;
 
 namespace GraphRoots.GraphApi;
 
@@ -151,18 +149,13 @@ public static class GraphApiServices
         return services;
     }
 
+    /// <summary>
+    /// Register the storage backend selected by <c>GRAPHROOTS_STORE</c> (default <c>neo4j</c>) and
+    /// initialize it (connectivity and schema) at host startup.
+    /// </summary>
     public static IServiceCollection AddGraphRootsStore(this IServiceCollection services, IConfiguration configuration)
     {
-        var uri = configuration["NEO4J_URI"] ?? Environment.GetEnvironmentVariable("NEO4J_URI") ?? "neo4j://127.0.0.1";
-        var user = configuration["NEO4J_USER"] ?? Environment.GetEnvironmentVariable("NEO4J_USER") ?? "neo4j";
-        var password = configuration["NEO4J_PASSWORD"] ?? Environment.GetEnvironmentVariable("NEO4J_PASSWORD");
-        var database = configuration["NEO4J_DATABASE"] ?? Environment.GetEnvironmentVariable("NEO4J_DATABASE") ?? "GraphRoots";
-        if (string.IsNullOrWhiteSpace(password))
-            throw new InvalidOperationException("NEO4J_PASSWORD is required.");
-
-        services.AddSingleton<IDriver>(_ => GraphDatabase.Driver(uri, AuthTokens.Basic(user, password)));
-        services.AddSingleton<IDbOperations>(sp => new DbOperations(sp.GetRequiredService<IDriver>(), database));
-        services.AddSingleton<IGraphStore>(sp => new Neo4jGraphStore(sp.GetRequiredService<IDbOperations>()));
+        services.AddConfiguredGraphStore(configuration);
         services.AddHostedService<GraphStoreStartup>();
         return services;
     }

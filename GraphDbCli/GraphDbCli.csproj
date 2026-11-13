@@ -10,10 +10,9 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" />
     <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
-    <PackageReference Include="Neo4j.Driver" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\GraphDb.Neo4j\GraphDb.Neo4j.csproj" />
+    <ProjectReference Include="..\GraphDb.Hosting\GraphDb.Hosting.csproj" />
     <ProjectReference Include="..\GrasshopperLib\GrasshopperLib.csproj" />
   </ItemGroup>
 </Project>

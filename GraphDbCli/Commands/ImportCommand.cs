@@ -7,7 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using CommandLine;
 using GraphRoots.GraphDb;
-using GraphRoots.GraphDb.Neo4j;
+using GraphRoots.GraphDb.Hosting;
 using GraphRoots.Grasshopper;
 using GraphRoots.Grasshopper.Parser;
 using Microsoft.Extensions.DependencyInjection;
@@ -51,15 +51,18 @@ namespace GraphRoots.GraphDbCli
 
             if (Purge)
             {
+                var storeConfiguration = StoreConfiguration();
+                var target = GraphStoreBackends.DescribeTarget(storeConfiguration);
                 if (!Yes)
                 {
-                    Console.WriteLine($"Refusing to purge {ResolveNeo4jTarget()} without --yes.");
+                    Console.WriteLine($"Refusing to purge {target} without --yes.");
                     return 1;
                 }
-                Console.WriteLine($"Purging all data at {ResolveNeo4jTarget()}.");
-                await using var driver = GetNeo4jDriver();
-                var dbOperations = new DbOperations(driver, ResolveNeo4jDatabase());
-                await dbOperations.PurgeDatabase(cancellationToken);
+                Console.WriteLine($"Purging all data at {target}.");
+                await using var store = new ServiceCollection()
+                    .AddConfiguredGraphStore(storeConfiguration)
+                    .BuildServiceProvider();
+                await store.GetRequiredService<IGraphStoreAdmin>().Purge(cancellationToken);
             }
 
             var endpoint = ResolveGraphQlUrl();

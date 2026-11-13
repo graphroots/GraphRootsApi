@@ -8,6 +8,6 @@
     <PackageReference Include="HotChocolate.AspNetCore" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\GraphDb.Neo4j\GraphDb.Neo4j.csproj" />
+    <ProjectReference Include="..\GraphDb.Hosting\GraphDb.Hosting.csproj" />
   </ItemGroup>
 </Project>

@@ -1,25 +1,23 @@
 using System.Threading;
 using System.Threading.Tasks;
 using GraphRoots.GraphDb;
-using GraphRoots.GraphDb.Neo4j;
 using Microsoft.Extensions.Hosting;
 
 namespace GraphRoots.GraphApi;
 
+/// <summary>
+/// Checks the configured storage backend and prepares its schema before the host serves requests.
+/// </summary>
 public sealed class GraphStoreStartup : IHostedService
 {
-    readonly IDbOperations _db;
+    readonly IGraphStoreAdmin _admin;
 
-    public GraphStoreStartup(IDbOperations db)
+    public GraphStoreStartup(IGraphStoreAdmin admin)
     {
-        _db = db;
+        _admin = admin;
     }
 
-    public async Task StartAsync(CancellationToken cancellationToken)
-    {
-        await _db.VerifyConnectivity(cancellationToken);
-        await _db.EnsureSchema(cancellationToken);
-    }
+    public Task StartAsync(CancellationToken cancellationToken) => _admin.Initialize(cancellationToken);
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 }
